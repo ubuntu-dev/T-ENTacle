@@ -998,7 +998,7 @@ def single_doc_cli(file_path, list_of_entity_names=[], strict=False, auto_skip=F
                 continue_cli=False
                 close()
 
-@click.command()
+@click.command('cli')
 @click.argument('path')
 @click.option('--i/--no-i', default=True, help='choose --i for interactive')
 @click.option('--a/--no-a', default=False, help='choose --a to auto skip exact patterns when in interactive mode. False by default.')
@@ -1045,16 +1045,14 @@ cli()
 # ====================================================== TODOS
 
 # 9. do the interesting patterns
-# 11. complete the docuementation of functions
-# 12. add logs
+# 11. add more documentation of functions
+# 12. add more logs
 # 13. add an option to select all tokens
 # 14. make it pip installable
 # 15. caching by doc name
 # 16. put a command line flag for just reports
 # 17. when suggesting tokens to users, get rid of the punctuations (all punctuation within two selected things will be automatically true)
-
 # 2. island the numbers together when outputting to the report (update the function find_values) : 80 . 6
-# 3. counter can help to overwrite partial things (for later)
 # 4. instances to the user are not getting ranked (for later)
 
 
