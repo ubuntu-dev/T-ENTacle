@@ -16,8 +16,9 @@ Install all the dependencies (python libraries):
 > pip3 install -r requirements.txt   
   
 ## Run the CLI:
-> cd text-analysis
-Let us run the CLI in a single file mode:
+> cd text-analysis  
+  
+Let us run the CLI in a single file mode:  
 > python knowledge_facilitator.py --i --f --e entity_name.txt ‘/path/to/pdf/pdf_file'  
   
 Some things to note here are:  
