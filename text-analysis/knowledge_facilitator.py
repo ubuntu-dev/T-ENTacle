@@ -998,7 +998,7 @@ def single_doc_cli(file_path, list_of_entity_names=[], strict=False, auto_skip=F
                 continue_cli=False
                 close()
 
-@click.command('cli')
+@click.command()
 @click.argument('path')
 @click.option('--i/--no-i', default=True, help='choose --i for interactive')
 @click.option('--a/--no-a', default=False, help='choose --a to auto skip exact patterns when in interactive mode. False by default.')
