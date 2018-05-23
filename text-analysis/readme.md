@@ -63,3 +63,8 @@ The software is sensitive to these difference and tries not to assume anything a
     * when a pattern is selected by a user, and they get another option to choose the tokens, they have to select each ’80’, ‘.’ and ‘6’ individually
     * in the report, that is generated the number is outputted as : '80 6’
 2. When rerunning a file, the software still creates the patterns, instead of importing them from the saved patterns. 
+
+  
+## The diagram shows the User interaction, Process and Data Flow for the KE:
+![Flow Diagram](https://github.com/nasa-jpl/T-ENTacle/blob/master/text-analysis/flow.jpg)
+  
