@@ -18,8 +18,9 @@ Install all the dependencies (python libraries):
 ## Run the CLI:
 > cd text-analysis
 Let us run the CLI in a single file mode:
-> python knowledge_facilitator.py --i --f --e entity_name.txt ‘/path/to/pdf/pdf_file'
-Some things to note here are:
+> python knowledge_facilitator.py --i --f --e entity_name.txt ‘/path/to/pdf/pdf_file'  
+  
+Some things to note here are:  
 * we use  --f to ‘start fresh’ this flag makes sure that old learned/saved files are deleted 
 * entity_name.txt is a file name that you can pass. The file contains the name of the entities that you would like to search (one in each line of the file)
 * --i makes sure that the user is involved in the process (Necessary in the beginning to created some ground truth)
@@ -27,14 +28,16 @@ Some things to note here are:
 The program goes through each entity listed in the entity_name.txt file and tries to engage the user in learning the right patterns or it.
 Now we will try to run in the batch mode with partial supervision:
 In the batch mode we give the CLI a directory path as an input instead of a single file path
-> python knowledge_facilitator.py --i --a --e entity_name.txt '/path/to/pdf’
-Some things to note here are:
+> python knowledge_facilitator.py --i --a --e entity_name.txt '/path/to/pdf’  
+  
+Some things to note here are:  
 * we did not use the --f flag here, because we want the CLI to access the previous learning. This helps the CLI to suggest better options to the user
 * the --a flag lets makes sure that the CLI does not bother the user for the entities for which the previously learned patterns are an exact match to some pattern in the current pdf (partial supervision)
 
 Let us now run the CLI in fully automatic mode under the assumption that some ’training’ has been provided to the CLI already (by running it in the interactive mode over a few Pdfs):
-> python knowledge_facilitator.py --e entity_name.txt '/path/to/pdf’
-Some things to note here are:
+> python knowledge_facilitator.py --e entity_name.txt '/path/to/pdf’  
+  
+Some things to note here are:  
 * The CLI in this case will not bother the user at all and will identity exact patterns for the entities based only on the previously learned patterns.
 
 ## Important Notes:
