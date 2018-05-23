@@ -7,13 +7,14 @@ Currently, Grobid-Quantities works imperfectly, so an additional component with 
 # Knowlegde Facilitator:
 
 ## Follow the instructions to get the CLI running in your local:
-Make sure you have python3 installed
-Clone this Git Repo:
-> git clone https://github.com/nasa-jpl/T-ENTacle.git
-Install all the dependencies (python libraries):
-> cd T-ENTacle
-> pip3 install -r requirements.txt 
-
+Make sure you have python3 installed  
+Clone this Git Repo:  
+> git clone https://github.com/nasa-jpl/T-ENTacle.git  
+  
+Install all the dependencies (python libraries):  
+> cd T-ENTacle  
+> pip3 install -r requirements.txt   
+  
 ## Run the CLI:
 > cd text-analysis
 Let us run the CLI in a single file mode:
