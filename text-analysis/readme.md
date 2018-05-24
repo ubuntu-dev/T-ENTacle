@@ -18,6 +18,9 @@ Install all the dependencies (python libraries):
 ## Run the CLI:
 > cd text-analysis  
   
+For help with the flags and options run:
+> python knowledge_facilitator.py --help
+
 Let us run the CLI in a single file mode:  
 > python knowledge_facilitator.py --i --f --e entity_name.txt ‘/path/to/pdf/pdf_file'  
   
