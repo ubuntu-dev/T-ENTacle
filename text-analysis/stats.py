@@ -6,7 +6,7 @@ from fuzzywuzzy import fuzz
 import datetime
 import pandas as pd
 import numpy as np
-
+import argparse
 
 def run_extractor(vendors, PATH):
     """
@@ -15,10 +15,10 @@ def run_extractor(vendors, PATH):
     agg_df = pd.DataFrame()
     for vendor in vendors:
         keyDict = {}
-        for n, file in enumerate(os.listdir(PATH + vendor)):
+        for n, file in enumerate(os.listdir(PATH + "/" + vendor + "/")):
             if '.DS_Store' in file:
                 continue
-            fullpath = PATH + vendor + '/' + file
+            fullpath = os.path.join(PATH, vendor) + '/' + file
             print(fullpath)
             resultDict, df = knowledge_extractor.create_csv(fullpath)
             agg_df=pd.concat([agg_df,df],ignore_index=True)
@@ -129,7 +129,7 @@ def match_entities(vendor):
     mapping={}
     if vendor=='Anadarko':
         mapping={'STAGE':['stage number'],
-                'SLICKWATER (BBLS)':['Total  vol slickwater (gal)'],
+                'SLICKWATER (BBLS)':['Total  vol slickwater, gal'],
                  'TOTAL FLUID (BBLS)':['total fluid (gal)'],
                  'MAX PPG':['max prop conc (ppa)'],
                  '100 M':['Total 100mesh (lbs)','Total prop QC'],
@@ -148,8 +148,8 @@ def match_entities(vendor):
             'Max Rate (bpm)':['pump rate max (bpm)'],
             'Max rate (bpm)': ['pump rate max (bpm)'],
             'ATP':['avg treating pressure(psi)'],
-            'Max(Psi, psi)':['max treating pressure(psi)'],
-            'pressure(psi)':['max treating pressure(psi)'],
+            'Max(Psi, psi)':['max treating pressure (psi)'],
+            'pressure(psi)':['max treating pressure (psi)'],
             'ISIP':['ISIP(psi)']
         }
     if vendor=='EOG':
@@ -159,7 +159,7 @@ def match_entities(vendor):
             'Proppant EOG100 Mesh':['Total 100mesh (lbs)','Total prop QC'],
             'Total Proppant Max Prop':['total proppant (lbs)'],
             'Avg Max Pump Rate':['pump rate avg (bpm)'],
-            'Max Rate':['pump rate max'],
+            'Max Rate':['pump rate maxm (bpm)'],
             'Max (PSI)':['avg treating pressure (psi)'],
             'Max (Psi)':['max treating pressure (psi)']
         }
@@ -187,7 +187,17 @@ if __name__=="__main__":
     # Apply knowledge_extractor
     # TODO: Change to args
     # VENDORS = something called with args
-    PATH = "/Users/asitangm/Desktop/pdfs_de_chevey/test/"
+    desc = """Calculates the number of entities found from Grant's list"""
+    parser = argparse.ArgumentParser(description= desc)
+    parser.add_argument('path_to_pdfs', metavar= "pdfs", type = str,
+                        help= "Path to the directory containing one folder per vendor of pdfs")
+    parser.add_argument("vendors", metavar = "v", nargs = "+", default=[],
+                        help = "A list containing the names of the vendor folders")
+    #PATH = "/Users/asitangm/Desktop/pdfs_de_chevey/test/"
+    args = parser.parse_args()
+
+    PATH = args.path_to_pdfs
+    VENDORS = args.vendors
 
     all_df_matched = []
     all_df = []
@@ -196,18 +206,18 @@ if __name__=="__main__":
         all_df.append(df_vend)
         df_matched = run_comparison(df_vend, vend)
         all_df_matched.append(df_matched)
-
-
+    
+    
     final_df_matched=pd.concat(all_df_matched,ignore_index=True)
     final_df_matched.to_csv('stats_correct.csv')
     final_df = pd.concat(all_df, ignore_index=True)
     final_df.to_csv('stats_all.csv')
 
-    # Compare stats to vendors
-    # for name in VENDORS:
-    #     print("********")
-    #     print(name)
-    #     print("********")
-    #     json_data = open("%s_Dict.json" % (name)).read()
-    #     data = json.loads(json_data)
+    #Compare stats to vendors
+    for name in VENDORS:
+        print("********")
+        print(name)
+        print("********")
+        json_data = open("%s_Dict.json" % (name)).read()
+        data = json.loads(json_data)
         #get_score(name)

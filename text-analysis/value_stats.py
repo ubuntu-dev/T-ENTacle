@@ -150,9 +150,19 @@ for well in well_mapping.values():
 recall_df = pd.DataFrame(recall)
 precision_df = pd.DataFrame(precision)
 
-recall_df.to_csv("recall.csv", index = False)
-precision_df.to_csv("precision.csv", index = False)
+recall_df.to_csv("recall_all_vendors_KE_original.csv")
+precision_df.to_csv("precision_all_vendors_KE_original.csv")
 
+#get an overall average
+def get_avg(df):
+    df_avg = df.drop(["Well Name", "Operator"], axis = 1).groupby("Operator Name").mean()
+    df_avg["mean"] = df_avg.mean(axis = 1)
+    return df_avg
 
+recall_avg_df = get_avg(recall_df)
+precision_avg_df = get_avg(precision_df)
+
+recall_avg_df.to_csv("recall_avg_KE_original.csv")
+precision_avg_df.to_csv("precision_avg_KE_original.csv")
 
         

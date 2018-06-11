@@ -3,6 +3,7 @@
 from nltk import ngrams
 import collections
 import string
+import subprocess
 import tika
 tika.initVM()
 import re
@@ -113,6 +114,7 @@ def create_csv(filepath):
     for pdf_page in os.listdir('temp'):
         # print('processing page: ',pdf_page)
         parsed = parser.from_file(os.path.join('temp',pdf_page))
+       # parsed = subprocess.call("tika --config=tika_config.xml " + fpath)
         try:
             pdftext=parsed['content']
         # TODO Find more specific excepetion.
@@ -297,14 +299,15 @@ def create_csv(filepath):
 
     return pdf_buffer, df
 
-if len(sys.argv) > 1:
-    filename = sys.argv[-1]
-    print("Extracting %s..." % (filename))
-else:
-    print("No file specified, using hardcoded path.")
-    ### TODO ADD A PATH IN A FILE
-    filename = '/YOUR_FILE/YOUR_PDF'
-pdf_buffer=create_csv(filename)
-print(pdf_buffer)
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        filename = sys.argv[-1]
+        print("Extracting %s..." % (filename))
+    else:
+        print("No file specified, using hardcoded path.")
+        ### TODO ADD A PATH IN A FILE
+        filename = '/YOUR_FILE/YOUR_PDF'
+    pdf_buffer=create_csv(filename)
+    print(pdf_buffer)
 
 

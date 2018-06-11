@@ -15,6 +15,7 @@ import jellyfish
 from fuzzywuzzy import fuzz
 import dill
 import click
+import spacy
 
 
 # ========= Data structures, initializations and hyperparameters
@@ -23,6 +24,9 @@ global PREP, PUNC, WORD, DIGI, UNIT
 global prepos, punc, units
 global threshold, current_document, counter
 global learned_patterns, all_patterns, current_patterns, interesting_patterns, fuzzy_patterns
+global nlp
+
+nlp = spacy.load("en")
 
 PREP='Prep~'
 PUNC='Punc~'
@@ -30,6 +34,18 @@ WORD='Word~'
 DIGI='Digi~'
 UNIT='Unit~'
 
+prepos = ['aboard', 'about', 'above', 'across', 'after', 'against', 'along', 'amid', 'among', 'anti', 'around',
+              'as',
+              'at', 'before', 'behind', 'below', 'beneath', 'beside', 'besides', 'between', 'beyond', 'but', 'by',
+              'concerning', 'considering', 'despite', 'down', 'during', 'except', 'excepting', 'excluding', 'following',
+              'for', 'from', 'in', 'inside', 'into', 'like', 'minus', 'near', 'of', 'off', 'on', 'onto', 'opposite',
+              'outside',
+              'over', 'past', 'per', 'plus', 'regarding', 'round', 'save', 'since', 'than', 'through', 'to', 'toward',
+              'towards',
+              'under', 'underneath', 'unlike', 'until', 'up', 'upon', 'versus', 'via', 'with', 'within', 'without',
+              'and', 'or']
+units = ['ft', 'gal', 'ppa', 'psi', 'lbs', 'lb', 'bpm', 'bbls', 'bbl', '\'', "\"", "'", "°", "$", 'hrs']
+punc = set(string.punctuation)
 
 # ========== utility functions
 
@@ -53,6 +69,12 @@ def ispunc(string):
     if re.match('[^a-zA-Z\d]',string):
         return True
     return False
+
+# def break_natural_boundaries(text):
+#     spacy_text = nlp(text)
+#     tokenized = [str(token) for token in spacy_text]
+#     print(tokenized)
+#     return(tokenized)
 
 def break_natural_boundaries(string):
 
@@ -84,6 +106,7 @@ def break_natural_boundaries(string):
             end = i
             stringbreak.append(string[start:end + 1])
             start = i+1
+    stringbreak = [s for s in stringbreak if s]
     return stringbreak
 
 def break_and_split(arr):
@@ -332,7 +355,7 @@ def matcher_bo_entity(entity_name):
 
     # find suitable current patterns
     if len(pre_learned_patterns)!=0:
-        print('We have seen this entity before! Let us find if the exact pattens work...')
+        print('We have seen this entity before! Let us find if the exact patterns work...')
         for hpattern, mask in zip(pre_learned_patterns, pre_learned_masks):
             # check if the exact pattern is present in the current patterns
             exact_hpatterns_found=find_exact_patterns(hpattern)
@@ -508,6 +531,8 @@ def create_hpattern(instance):
     signature = []
 
     for token in instance:
+        if not token:
+            continue
         if token in prepos:
             signature.append((token, token, PREP))
         elif token.isnumeric():
@@ -543,33 +568,44 @@ def create_patterns_per_doc(parsed_text):
         page_base_patterns=[]
         page_instances = []
         for line in page.split('\n'):  # pattern analysis is done based on each line
-
+            if not line:
+                continue
             # create chunks by dividing on commas+space, period+space (and multi-space??) so that patterns don't span beyond them
             # chunks=re.split(', |\. |\s{2,}',line)
             chunks = re.split(', |\. |;', line.lower())
-            # print(line,chunks)
+            print(line,chunks)
 
             # remove commas from numbers (8,643), give valid spacing around #, = and @
             # tokenize everything based on spaces/tabs
             # creates a list(token) of lists(chunk): [[token,token,token],[token,token]]
-            chunks = [
-                chunk.replace(",", "").replace("=", " = ").replace("@", " @ ").replace("#", " # ").replace("$", " $ ").
-                    replace("°", " ° ").replace("%", " % ").replace("\"", " \" ").replace("'", " ' ").replace(":",
-                                                                                                              " : ").split()
-                for chunk in chunks]
+            # chunks = [
+            #     chunk.replace(",", "").replace("=", " = ").replace("@", " @ ").replace("#", " # ").replace("$", " $ ").
+            #         replace("°", " ° ").replace("%", " % ").replace("\"", " \" ").replace("'", " ' ").replace(":",
+            #                                                                                                   " : ").split()
+            #     for chunk in chunks]
+            chunks = [re.sub(r"([^a-zA-Z0-9])", r" \1 ", chunk.replace(",", "")) for chunk in chunks]
 
-            # separate the tokens further using the natural seperation boundaries
-            chunks = [break_and_split(chunk) for chunk in chunks]
+            # separate the tokens further using the natural sepamration boundaries
+            # chunks = [break_and_split(chunk) for chunk in chunks]
+            chunks = [break_natural_boundaries(chunk) for chunk in chunks]
             chunks_base_patterns=[]
             chunks_hpatterns=[]
 
             for chunk in chunks:
             # convert each chunk to base pattern and hpattern
+                if not chunk:
+                    continue
+                print(chunk)
+                print(type(chunk))
+                print(type(chunk[0]))
                 hpattern=create_hpattern(chunk)
                 base_pattern=get_base_pattern(hpattern)
                 chunks_base_patterns.append(base_pattern)
                 chunks_hpatterns.append(hpattern)
 
+            print("chunks", chunks)
+            print("chunks_base_patterns", chunks_base_patterns)
+            print("chunks_hpatterns", chunks_hpatterns)
             # create n-grams
 
             n_gram_range = (3, 4, 5, 6, 7)
@@ -581,8 +617,11 @@ def create_patterns_per_doc(parsed_text):
 
                 # flatten the nested list
                 all_grams_base_patterns = [item for sublist in all_grams_base_patterns for item in sublist]
+                print("all_grams_base_patterns", all_grams_base_patterns)
                 all_grams_hpatterns = [item for sublist in all_grams_hpatterns for item in sublist]
+                print("all_grams_hpatterns", all_grams_hpatterns)
                 all_grams = [item for sublist in all_grams for item in sublist]
+                print("all_grams", all_grams)
 
                 page_base_patterns.extend(all_grams_base_patterns)
                 page_hpatterns.extend(all_grams_hpatterns)
@@ -592,19 +631,20 @@ def create_patterns_per_doc(parsed_text):
         all_base_patterns.append(page_base_patterns)
         all_hpatterns.append(page_hpatterns)
         all_instances.append(page_instances)
-
-
+    print("all base patterns", all_base_patterns)
     all_page_numbers=[]
     for indx, _ in enumerate(all_instances):
         all_page_numbers.append(list(np.full(len(_),indx+1)))
 
     all_base_patterns_flattened=[item for sublist in all_base_patterns for item in sublist]
+    print("all base patterns flattened", all_base_patterns_flattened)
     all_hpatterns_flattened = [item for sublist in all_hpatterns for item in sublist]
     all_instances_flattened = [item for sublist in all_instances for item in sublist]
     all_page_numbers_flattened=[item for sublist in all_page_numbers for item in sublist]
 
     counted_patterns = collections.Counter(all_base_patterns_flattened)
-
+    print(counted_patterns)
+    exit()
     # ======= get the longest pattern with the same support (keeps only the superset, based on minsup criteria)
     # todo: check if works correctly
     filtered_patterns = {}
@@ -688,18 +728,18 @@ def init(file_path, fresh=False):
     global threshold, current_document_path, counter
     global learned_patterns, all_patterns, current_patterns, other_patterns, other_pattern_instances
 
-    prepos = ['aboard', 'about', 'above', 'across', 'after', 'against', 'along', 'amid', 'among', 'anti', 'around',
-              'as',
-              'at', 'before', 'behind', 'below', 'beneath', 'beside', 'besides', 'between', 'beyond', 'but', 'by',
-              'concerning', 'considering', 'despite', 'down', 'during', 'except', 'excepting', 'excluding', 'following',
-              'for', 'from', 'in', 'inside', 'into', 'like', 'minus', 'near', 'of', 'off', 'on', 'onto', 'opposite',
-              'outside',
-              'over', 'past', 'per', 'plus', 'regarding', 'round', 'save', 'since', 'than', 'through', 'to', 'toward',
-              'towards',
-              'under', 'underneath', 'unlike', 'until', 'up', 'upon', 'versus', 'via', 'with', 'within', 'without',
-              'and', 'or']
-    units = ['ft', 'gal', 'ppa', 'psi', 'lbs', 'lb', 'bpm', 'bbls', 'bbl', '\'', "\"", "'", "°", "$", 'hrs']
-    punc = set(string.punctuation)
+    # prepos = ['aboard', 'about', 'above', 'across', 'after', 'against', 'along', 'amid', 'among', 'anti', 'around',
+    #           'as',
+    #           'at', 'before', 'behind', 'below', 'beneath', 'beside', 'besides', 'between', 'beyond', 'but', 'by',
+    #           'concerning', 'considering', 'despite', 'down', 'during', 'except', 'excepting', 'excluding', 'following',
+    #           'for', 'from', 'in', 'inside', 'into', 'like', 'minus', 'near', 'of', 'off', 'on', 'onto', 'opposite',
+    #           'outside',
+    #           'over', 'past', 'per', 'plus', 'regarding', 'round', 'save', 'since', 'than', 'through', 'to', 'toward',
+    #           'towards',
+    #           'under', 'underneath', 'unlike', 'until', 'up', 'upon', 'versus', 'via', 'with', 'within', 'without',
+    #           'and', 'or']
+    # units = ['ft', 'gal', 'ppa', 'psi', 'lbs', 'lb', 'bpm', 'bbls', 'bbl', '\'', "\"", "'", "°", "$", 'hrs']
+    # punc = set(string.punctuation)
 
     threshold = 10
     # save state across documents
@@ -727,7 +767,7 @@ def init(file_path, fresh=False):
 
     # pattern information about just the current pdf/document
     current_patterns = pd.DataFrame(
-        columns=['pattern_id', 'base_pattern', 'instances', 'hpattern', 'document_name', 'num_instances', 'mask','page_numbers'])
+        columns=['pattern_id', 'base_pattern', 'instances', 'hpattern', 'document_name', 'num_instnces', 'mask','page_numbers'])
 
     other_patterns = pd.DataFrame(columns=['hpattern', 'instances', 'document_name'])
 
@@ -1035,7 +1075,7 @@ def cli(path, i, a, f, e=''):
 
 # ============================================== begin the CLI
 
-cli()
+#cli()
 
 # Example Commands:
 # python knowledge_facilitator.py --i --e entity_name.txt '/path/to/the/pdf/name_of_the_pdf.pdf'
@@ -1081,7 +1121,12 @@ cli()
 # print(ispunc(';adad'))
 # print(ispunc('adad'))
 
-# print(break_natural_boundaries('hello0098#%ji78'))
+print(break_natural_boundaries('hello0098#%ji78'))
+print(break_natural_boundaries("AVALANCHE 29-40 UNIT 1H/RICOCHET 29-40 UNIT 1H"))
+print(break_natural_boundaries("ATP : 23 psi"))
+print(break_and_split(['hello0098#%ji78']))
+print(break_and_split(["AVALANCHE 29-40 UNIT 1H/RICOCHET 29-40 UNIT 1H"]))
+print(break_and_split(["ATP : 23 psi"]))
 
 # hpatterns=[]
 # base_patterns=[]
@@ -1201,3 +1246,7 @@ cli()
 # all_patterns = all_patterns.replace(np.nan, '', regex=True)
 # build_report()
 
+# parsed = parse_document("/Users/akdidier/Documents/Drilling-Grant/pdfs/Anadarko/AVALANCHE_29-40_UNIT_1H_Completion_Reports.pdf")
+# create_patterns_per_doc(parsed)
+line = ["AVALANCHE 29-40 UNIT 1H/RICOCHET 29-40 UNIT 1H"]
+create_patterns_per_doc(line)
