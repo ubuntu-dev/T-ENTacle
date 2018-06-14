@@ -1,3 +1,7 @@
+import PyPDF2
+import os
+import shutil
+
 def split_pdf_pages(input_pdf_path, target_dir, fname_fmt=u"{num_page:04d}.pdf"):
 
     if not os.path.exists(target_dir):
@@ -8,7 +12,10 @@ def split_pdf_pages(input_pdf_path, target_dir, fname_fmt=u"{num_page:04d}.pdf")
         return
 
     with open(input_pdf_path, "rb") as input_stream:
-        input_pdf = PyPDF2.PdfFileReader(input_stream)
+        try:
+            input_pdf = PyPDF2.PdfFileReader(input_stream)
+        except PyPDF2.utils.PdfReadError:
+            print("Could not read file: " + input_pdf_path + ". EOF marker not found.")
 
         if input_pdf.flattenedPages is None:
             # flatten the file using getNumPages()
