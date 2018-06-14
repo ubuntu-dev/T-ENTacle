@@ -18,6 +18,8 @@ def run_extractor(vendors, PATH):
         for n, file in enumerate(os.listdir(PATH + "/" + vendor + "/")):
             if '.DS_Store' in file:
                 continue
+            if not '.pdf' in file:
+                continue
             fullpath = os.path.join(PATH, vendor) + '/' + file
             print(fullpath)
             resultDict, df = knowledge_extractor.create_csv(fullpath)
@@ -134,7 +136,7 @@ def match_entities(vendor):
                  'MAX PPG':['max prop conc (ppa)'],
                  '100 M':['Total 100mesh (lbs)','Total prop QC'],
                  'TOTAL PROP LBM':['total proppant (lbs)'],
-                'ATR':['pump rate avg (bpm)'],
+                 'ATR':['pump rate avg (bpm)'],
                  'MTR':['pump rate max (bpm)'],
                  'ATP':['avg treating pressure (psi)'],
                  'MTP':['max treating pressure (psi)'],
@@ -150,7 +152,7 @@ def match_entities(vendor):
             'ATP':['avg treating pressure(psi)'],
             'Max(Psi, psi)':['max treating pressure (psi)'],
             'pressure(psi)':['max treating pressure (psi)'],
-            'ISIP':['ISIP(psi)']
+            'ISIP':['ISIP (psi)']
         }
     if vendor=='EOG':
         mapping={
@@ -159,7 +161,7 @@ def match_entities(vendor):
             'Proppant EOG100 Mesh':['Total 100mesh (lbs)','Total prop QC'],
             'Total Proppant Max Prop':['total proppant (lbs)'],
             'Avg Max Pump Rate':['pump rate avg (bpm)'],
-            'Max Rate':['pump rate maxm (bpm)'],
+            'Max Rate':['pump rate max (bpm)'],
             'Max (PSI)':['avg treating pressure (psi)'],
             'Max (Psi)':['max treating pressure (psi)']
         }
@@ -209,9 +211,9 @@ if __name__=="__main__":
     
     
     final_df_matched=pd.concat(all_df_matched,ignore_index=True)
-    final_df_matched.to_csv('stats_correct.csv')
+    final_df_matched.to_csv('stats_correct.csv', ignore_index = True)
     final_df = pd.concat(all_df, ignore_index=True)
-    final_df.to_csv('stats_all.csv')
+    final_df.to_csv('stats_all.csv', ignore_index = True)
 
     #Compare stats to vendors
     for name in VENDORS:

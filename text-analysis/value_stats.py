@@ -13,7 +13,6 @@ from pandas.io.json import json_normalize
 df_extracted = pd.read_csv('stats_correct.csv')
 df_gt = pd.read_csv('CompletionsDataExtract.csv')
 
-
 # extract all unique rows in "Well Name" columns
 wellname_extracted = list(set(df_extracted.loc[:, 'Well Name']))
 wellname_gt = list(set(df_gt.loc[:, 'Well Name']))
@@ -127,6 +126,7 @@ for well in well_mapping.values():
 recall = []
 precision = []
 i = 0
+
 for well in well_mapping.values():
     recall.append({"Well Name" : well})
     precision.append({"Well Name" : well})
@@ -150,8 +150,8 @@ for well in well_mapping.values():
 recall_df = pd.DataFrame(recall)
 precision_df = pd.DataFrame(precision)
 
-recall_df.to_csv("recall_all_vendors_KE_original.csv")
-precision_df.to_csv("precision_all_vendors_KE_original.csv")
+recall_df.to_csv("recall_all_vendors_KE.csv")
+precision_df.to_csv("precision_all_vendors_KE.csv")
 
 #get an overall average
 def get_avg(df):
@@ -162,7 +162,7 @@ def get_avg(df):
 recall_avg_df = get_avg(recall_df)
 precision_avg_df = get_avg(precision_df)
 
-recall_avg_df.to_csv("recall_avg_KE_original.csv")
-precision_avg_df.to_csv("precision_avg_KE_original.csv")
+recall_avg_df.to_csv("recall_avg_KE.csv")
+precision_avg_df.to_csv("precision_avg_KE.csv")
 
         
