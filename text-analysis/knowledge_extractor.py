@@ -75,7 +75,11 @@ def split_pdf_pages(input_pdf_path, target_dir, fname_fmt=u"{num_page:04d}.pdf")
         return
 
     with open(input_pdf_path, "rb") as input_stream:
-        input_pdf = PyPDF2.PdfFileReader(input_stream)
+        try:
+            input_pdf = PyPDF2.PdfFileReader(input_stream)
+        except PyPDF2.utils.PdfReadError:
+            print("File " + input_pdf_path + "could not be read. EOF marker not found")
+            return
 
         if input_pdf.flattenedPages is None:
             # flatten the file using getNumPages()
@@ -100,9 +104,10 @@ def create_csv(filepath):
 
 
     # create a dir for dumping split pdfs
+    if os.path.isdir('./temp'):
+        shutil.rmtree('./temp')
     os.mkdir('./temp')
-    #UNCOMMENT THIS LINE AND ADD A FILE PATH
-    #filepath = 
+
     split_pdf_pages(filepath,'temp')
     
     # parsed={}
@@ -117,6 +122,7 @@ def create_csv(filepath):
        # parsed = subprocess.call("tika --config=tika_config.xml " + fpath)
         try:
             pdftext=parsed['content']
+            print(pdftext)
         # TODO Find more specific excepetion.
         except Exception:
             print("Could not read file.")
