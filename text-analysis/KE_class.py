@@ -316,36 +316,42 @@ class KnowledgeExtractor(object):
         'max press: ## unit' is seen 3 times and 'max press: ##' is seen 3 times, then we want to keep the longer pattern
         because it has more information. If instead the shorter pattern were seen more times, the longer pattern is
         likely a special case and we should keep both to prevent throwing away valuable information.
-        In the event that the longer pattern contains more than one number and/or unit, then we have a case of
-        consistently co-occuring patterns, and the subset should be kept. (Example 'atp: ## psi mtp: ## psi'. Here these
-        are clearly two separate entities.)
         :param patterns, list of pattern objects
         :return:
         """
         counted_patterns = collections.Counter([p.base_pattern for p in patterns])
         pattern_indices = {patt: idx for idx, patt in enumerate([p.base_pattern for p in patterns])}
-        counted_copy = copy.deepcopy(counted_patterns) #so we don't mutate the object we are iterating over
-        for p in patterns:
-            if not p.base_pattern in counted_copy.keys():
-                continue
-            label_counts = collections.Counter([h[-1] for h in p.hpattern])  # just need Word~, Digi~, Unit~ etc.
-            if label_counts['Digi~'] > 1 or label_counts['Unit~'] > 1:
-                counted_copy.pop(p.base_pattern)
+        pattern_indices = {}
+        for idx, patt in enumerate([p.base_pattern for p in patterns]):
+            if patt not in pattern_indices:
+                pattern_indices[patt] = [idx]
+            else:
+                pattern_indices[patt].append(idx)
 
-            print(p.base_pattern)
-            subpatterns = list(itertools.chain(*[list(ngrams(p.base_pattern, i)) for i in range(3, len(p.base_pattern))]))
+        to_remove = []
+        for p in counted_patterns.keys():
+            if p in to_remove:
+                continue
+            subpatterns = list(itertools.chain(*[list(ngrams(p, i)) for i in range(3, len(p))]))
             #If a subpattern has the same support as the pattern, remove the subpattern.
             for subpat in subpatterns:
-                if subpat == p.base_pattern:
+                if subpat == p:
                     continue
-                print("Checking ", subpat)
-                if subpat in counted_copy.keys() and counted_copy[subpat] == counted_copy[p.base_pattern]:
-                    print("pattern and subpatt have same support")
-                    print("Removing ", subpat)
-                    counted_copy.pop(subpat)
+                #print("Checking ", subpat)
+                if subpat in counted_patterns.keys() and counted_patterns[subpat] == counted_patterns[p]:
+                    #print("pattern and subpat have same support")
+                    #print("Removing ", subpat)
+                    if subpat not in to_remove:
+                        to_remove.append(subpat)
 
-        final_patterns = list(counted_copy.keys())
-        final_indices = [pattern_indices[pat] for pat in final_patterns]
+        # print("Removing patterns:")
+        # print(to_remove)
+        for p in to_remove:
+            # print(p)
+            counted_patterns.pop(p)
+        final_patterns = list(counted_patterns.keys())
+        final_indices = []
+        for pat in final_patterns: final_indices += pattern_indices[pat]
         final_pattern_objects = [patterns[i] for i in final_indices]
         return final_pattern_objects
 
@@ -370,70 +376,79 @@ class KnowledgeExtractor(object):
         :param row, a row of the self.current_patterns
         :return bool
         '''
+        # TODO rewrite this
         # if the pattern occurs in the document less than the threshold then return false
         if int(row['num_instances']) > self.threshold:
             return True
         return False
 
-    def punc_filter(self, row):
+    def punc_filter(self, pattern):
         '''
         Checks that the pattern does NOT start with punctuation or a preposition
-        :param row, a row of the self.current_patterns
+        :param pattern, a pattern object
         :return bool
         '''
-        print(row)
-        pattern = ast.literal_eval(str(row['hpattern']))
-        print(pattern)
-        # if the first token is preposition/pronoun or punctuation then return false
-        if pattern[0][2] == KnowledgeExtractor.PREP or pattern[0][2] == KnowledgeExtractor.PUNC:
+        # if the first token is preposition/pronoun or punctuation then get rid of it
+        if pattern.hpattern[0][2] == Pattern.PREP or pattern.hpattern[0][2] == Pattern.PUNC:
             return False
-
         return True
 
-    def no_entity_filter(self, row):
+    def no_entity_filter(self, pattern):
         '''
         Checks that the pattern contains an entity (Filter out patterns that contain only
         punctuations, prepositions, and numbers)
-        row, a row of the self.current_patterns
+        :param pattern, a pattern object
         :return bool
         '''
 
-        pattern = ast.literal_eval(str(row['hpattern']))
-        for token in pattern:
-            # if atleast one entity/unit found, it is okay
-            if token[2] == KnowledgeExtractor.WORD:
-                return True
+        labels = [h[-1] for h in pattern.hpattern]
+        if Pattern.WORD in labels:
+            return True
         return False
 
-    def no_num_filter(self, row):
+    def multiple_entities_filter(self, pattern):
+        """
+        if a pattern contains more than one number or unit, then multiple entities have been concatenated into one chunk
+        :param pattern: a pattern object
+        :return:
+        """
+        labels = [h[-1] for h in pattern.hpattern]
+        label_counts = collections.Counter(labels)
+        if label_counts[pattern.DIGI] > 1 or label_counts[pattern.UNIT] > 1:
+            #get rid of it
+            return False
+        return True
+
+    def no_num_filter(self, pattern):
         '''
         Checks that the pattern contains numbers
         row, a row of the self.current_patterns
         won't pick up any patterns that are strings
+        :param pattern, a pattern object
         :return bool
         '''
 
-        pattern = ast.literal_eval(str(row['hpattern']))
-        for token in pattern:
-            # if at least one number found, it is okay
-            if token[2] == KnowledgeExtractor.DIGI:
-                return True
+        # if at least one number found, it is okay
+        labels = [h[-1] for h in pattern.hpattern]
+        if Pattern.DIGI in labels:
+            return True
         return False
 
     def apply_filters(self, filters, patterns):
         '''
-        Apply filters to remove 'irrelevant' current patterns: see filter1 impl
+        Apply filters to remove 'irrelevant' patterns
         :param: filters, list of filter functions
         :param: patterns, list of pattern objects
         :return:
         '''
-
+        print(len(patterns))
         for f in filters:
-            filtered_patterns = f(patterns)
-            if not filtered_patterns:
+            patterns = list(filter(f, patterns))
+            print(len(patterns))
+            if not patterns:
                 print("Uh oh, we've filtered out everything. There were no meaningful patterns. ")
-        print('FILTERED! now number of patterns: ', len(filtered_patterns))
-        return filtered_patterns
+        print('FILTERED! now number of patterns: ', len(patterns))
+        return patterns
 
     def create_patterns_per_doc(self, parsed_text, doc_name = None):
         '''
@@ -496,17 +511,25 @@ class KnowledgeExtractor(object):
                     n_gram_patterns = list(map(lambda text: Pattern(text, page_num, doc_name), all_grams)) #list of pattern objects
                     patterns.extend(n_gram_patterns)
 
-        # print("all patterns: ")
-        # for p in patterns:
-        #    # print(p.base_pattern)
-        #     print(p.instance)
+        print("all patterns: ")
+        for p in patterns:
+           # print(p.base_pattern)
+            print(p.instance)
+        # #try filtering first
+        filtered_patterns = self.apply_filters([self.punc_filter, self.no_num_filter, self.no_entity_filter,
+                                                self.multiple_entities_filter], patterns)
+        print("Filtered patterns: ")
+        for p in filtered_patterns:
+            print(p.instance)
+
         #get the longest pattern with the same support (keeps only the superset, based on minsup criteria)
-        pattern_subset = self.prune(patterns)
-        # print("subset: ")
-        # for p in pattern_subset:
-        #     print(p.base_pattern)
-        #     print(p.instance)
-        #
+        pattern_subset = self.prune(filtered_patterns)
+
+        print("subset: ")
+        for p in pattern_subset:
+            #print(p.base_pattern)
+            print(p.instance)
+
         # #aggregate all of the patterns
         # aggregated_patterns = self.aggregate_patterns(pattern_subset)
         # print("aggregated")
