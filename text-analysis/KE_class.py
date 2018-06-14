@@ -8,6 +8,8 @@ import collections
 import copy
 import itertools
 import pandas as pd
+from pattern import Pattern
+import timeit
 
 """
 right now, works on one document at a time, but could move patterns dataframe to a class variable 
@@ -50,7 +52,7 @@ class KnowledgeExtractor(object):
     def __init__(self):
         self.current_patterns = pd.DataFrame(columns=['pattern_id', 'base_pattern', 'instances', 'hpattern',
                                                       'document_name', 'num_instances', 'mask','page_numbers'])
-        self.threshold = 1
+        self.threshold = 5
 
     def getID(self):
         """
@@ -307,13 +309,67 @@ class KnowledgeExtractor(object):
         final_patterns_indices = [pattern_indices[pat] for pat in final_patterns]
         return final_patterns_indices
 
+    def prune(self, patterns):
+        """
+        In all of the found patterns, we want to prune away some patterns that are subsets of each other, keeping the
+        most detailed pattern if the support for the pattern and its subpattern are the same. For instance, suppose
+        'max press: ## unit' is seen 3 times and 'max press: ##' is seen 3 times, then we want to keep the longer pattern
+        because it has more information. If instead the shorter pattern were seen more times, the longer pattern is
+        likely a special case and we should keep both to prevent throwing away valuable information.
+        In the event that the longer pattern contains more than one number and/or unit, then we have a case of
+        consistently co-occuring patterns, and the subset should be kept. (Example 'atp: ## psi mtp: ## psi'. Here these
+        are clearly two separate entities.)
+        :param patterns, list of pattern objects
+        :return:
+        """
+        counted_patterns = collections.Counter([p.base_pattern for p in patterns])
+        pattern_indices = {patt: idx for idx, patt in enumerate([p.base_pattern for p in patterns])}
+        counted_copy = copy.deepcopy(counted_patterns) #so we don't mutate the object we are iterating over
+        for p in patterns:
+            if not p.base_pattern in counted_copy.keys():
+                continue
+            label_counts = collections.Counter([h[-1] for h in p.hpattern])  # just need Word~, Digi~, Unit~ etc.
+            if label_counts['Digi~'] > 1 or label_counts['Unit~'] > 1:
+                counted_copy.pop(p.base_pattern)
+
+            print(p.base_pattern)
+            subpatterns = list(itertools.chain(*[list(ngrams(p.base_pattern, i)) for i in range(3, len(p.base_pattern))]))
+            #If a subpattern has the same support as the pattern, remove the subpattern.
+            for subpat in subpatterns:
+                if subpat == p.base_pattern:
+                    continue
+                print("Checking ", subpat)
+                if subpat in counted_copy.keys() and counted_copy[subpat] == counted_copy[p.base_pattern]:
+                    print("pattern and subpatt have same support")
+                    print("Removing ", subpat)
+                    counted_copy.pop(subpat)
+
+        final_patterns = list(counted_copy.keys())
+        final_indices = [pattern_indices[pat] for pat in final_patterns]
+        final_pattern_objects = [patterns[i] for i in final_indices]
+        return final_pattern_objects
+
+    def aggregate_patterns(self, patterns):
+        """
+        Looks for patterns with the same base pattern and stores their instances together
+        :param patterns: list of pattern objects
+        :return:
+        """
+        aggregated = {}
+        for p in patterns:
+            if p.base_pattern not in aggregated.keys():
+                aggregated[p.base_pattern] = p
+            else:
+                aggregated[p.base_pattern].add_instance(p.instance)
+                aggregated[p.base_pattern].add_page_num(p.page_num)
+        return list(aggregated.values())
+
     def significance_filter(self, row):
         '''
         Determines if a pattern is below the defined frequency threshold. Used to remove insignificant patterns.
         :param row, a row of the self.current_patterns
         :return bool
         '''
-        global threshold
         # if the pattern occurs in the document less than the threshold then return false
         if int(row['num_instances']) > self.threshold:
             return True
@@ -364,36 +420,27 @@ class KnowledgeExtractor(object):
                 return True
         return False
 
-    def apply_filters(self):
+    def apply_filters(self, filters, patterns):
         '''
         Apply filters to remove 'irrelevant' current patterns: see filter1 impl
-        :param: filter: a function
+        :param: filters, list of filter functions
+        :param: patterns, list of pattern objects
         :return:
         '''
-
-        filters = [self.significance_filter, self.punc_filter, self.no_entity_filter, self.no_num_filter]
 
         for f in filters:
-            # print(f)
-            # for index, row in self.current_patterns.iterrows():
-            #     print("row ", row)
-            #     try:
-            #         print("output of filter", f(row))
-            #     except Exception as e:
-            #         print(e)
-            self.current_patterns = self.current_patterns[self.current_patterns.apply(lambda x: f(x), axis=1)]
-            if self.current_patterns.empty:
-                print("Uh oh, we've filtered out everything. There were no meaningful patterns. "
-                      "Try re-running with a lower significance threshold.")
-                break
+            filtered_patterns = f(patterns)
+            if not filtered_patterns:
+                print("Uh oh, we've filtered out everything. There were no meaningful patterns. ")
+        print('FILTERED! now number of patterns: ', len(filtered_patterns))
+        return filtered_patterns
 
-        print('FILTERED! now number of patterns: ', len(self.current_patterns))
-
-    def create_patterns_per_doc(self, parsed_text, doc_name):
+    def create_patterns_per_doc(self, parsed_text, doc_name = None):
         '''
-
+        The main driver of knowledge extractor which searches for patterns in a given text.
         :param parsed_text: it should be a list of texts. One item/text for every page in the document.
-        :return:
+        :param doc_name: string, optional. The name of the document being parsed.
+        :return: None
         '''
         #check for expected input
         if isinstance(parsed_text, str):
@@ -401,26 +448,31 @@ class KnowledgeExtractor(object):
         elif not isinstance(parsed_text, list):
             raise ValueError("Expected type list. Got type ", type(parsed_text))
 
-        global current_patterns
-        global current_document_path
-        global all_patterns
-
         all_hpatterns = []
         all_base_patterns = []
         all_instances = []
 
-        for page in parsed_text:
+        patterns = [] #To store all the pattern objects for the doc
+
+        #Create the signatures for each pattern. All signature information is stored in a pattern object.
+        for page_num, page in enumerate(parsed_text):
             page_hpatterns = []
             page_base_patterns = []
             page_instances = []
+
+            # pg = re.split(',\s{1,5}|\.\s{1,5}|;', page.lower())
+
+
             for line in page.split('\n'):  # pattern analysis is done based on each line
                 if not line:
                     continue
-                # create chunks by dividing on commas+space, period+space (and multi-space??) so that patterns don't span beyond them
-                chunks = re.split(', |\. |;', line.lower())
+                # create chunks by dividing on commas+space, period+space (and multi-space??)
+                # so that patterns don't span beyond them
+                chunks = re.split(',\s{1,5}|\.\s{1,5}|;', line.lower())
                 # remove commas from numbers (8,643), give valid spacing around #, = and @
                 # tokenize everything based on spaces/tabs
                 # creates a list(token) of lists(chunk): [[token,token,token],[token,token]]
+                # look for the part where symbols are separated with spaces
 
                 chunks = [re.sub(r"([^a-zA-Z0-9])", r" \1 ", chunk.replace(",", "")) for chunk in chunks]
 
@@ -429,53 +481,101 @@ class KnowledgeExtractor(object):
                # print("chunks ", chunks)
                 chunks_base_patterns = []
                 chunks_hpatterns = []
+                #print(chunks)
 
+                #create n-grams out of every chunk and patterns for each n-gram
+                n_gram_range = (3, 4, 5, 6, 7)
                 for chunk in chunks:
                     if not chunk:
                         continue
-                 #   print(chunk)
-                    # convert each chunk to base pattern and hpattern
-                    hpattern = self.create_hpattern(chunk)
-                    # print("hpattern", hpattern)
-                    if not hpattern:
-                        print("skipping empty pattern")
-                        continue
-                    base_pattern = self.get_base_pattern(hpattern)
-                    # print("base pattern", base_pattern)
-                    chunks_base_patterns.append(base_pattern)
-                    chunks_hpatterns.append(hpattern)
+                    all_grams_nested = list(map(lambda n: list(ngrams(chunk, n)), n_gram_range))
+                    #flatten because ngrams returns a list of tuples
+                    all_grams = []
+                    for lst in all_grams_nested: all_grams += lst
+                    #print("all grams ", all_grams)
+                    n_gram_patterns = list(map(lambda text: Pattern(text, page_num, doc_name), all_grams)) #list of pattern objects
+                    patterns.extend(n_gram_patterns)
 
-                # create n-grams
+        # print("all patterns: ")
+        # for p in patterns:
+        #    # print(p.base_pattern)
+        #     print(p.instance)
+        #get the longest pattern with the same support (keeps only the superset, based on minsup criteria)
+        pattern_subset = self.prune(patterns)
+        # print("subset: ")
+        # for p in pattern_subset:
+        #     print(p.base_pattern)
+        #     print(p.instance)
+        #
+        # #aggregate all of the patterns
+        # aggregated_patterns = self.aggregate_patterns(pattern_subset)
+        # print("aggregated")
+        # for p in aggregated_patterns:
+        #     print(p.base_pattern)
+        #     print(p.instances)
 
-                n_gram_range = (3, 4, 5, 6, 7)
-                for n in n_gram_range:
-                    all_grams_base_patterns = list(map(lambda x: list(ngrams(x, n)), chunks_base_patterns))
-                    all_grams_hpatterns = list(map(lambda x: list(ngrams(x, n)), chunks_hpatterns))
-                    all_grams = list(map(lambda x: list(ngrams(x, n)), chunks))
+        exit()
+        #TODO test the aggregated patterns and subsetting. Either set current patterns or change the filter func
+        #to work on pattern objects
+        #filter
 
-                    # flatten the nested list
-                    all_grams_base_patterns = [item for sublist in all_grams_base_patterns for item in sublist]
-                    all_grams_hpatterns = [item for sublist in all_grams_hpatterns for item in sublist]
-                    all_grams = [item for sublist in all_grams for item in sublist]
+        #         for chunk in chunks:
+        #             if not chunk:
+        #                 continue
+        #          #   print(chunk)
+        #             # convert each chunk to base pattern and hpattern
+        #             # TODO: give some explanation of base pattern and hpattern
+        #             hpattern = self.create_hpattern(chunk)
+        #             # print("hpattern", hpattern)
+        #             if not hpattern:
+        #                 print("skipping empty pattern")
+        #                 continue
+        #             base_pattern = self.get_base_pattern(hpattern)
+        #             # print("base pattern", base_pattern)
+        #             chunks_base_patterns.append(base_pattern)
+        #             chunks_hpatterns.append(hpattern)
+        #
+        #         # create n-grams
+        #
+        #         n_gram_range = (3, 4, 5, 6, 7)
+        #         for n in n_gram_range:
+        #             all_grams_base_patterns = list(map(lambda x: list(ngrams(x, n)), chunks_base_patterns))
+        #             all_grams_hpatterns = list(map(lambda x: list(ngrams(x, n)), chunks_hpatterns))
+        #             all_grams = list(map(lambda x: list(ngrams(x, n)), chunks))
+        #
+        #             print(chunks_base_patterns)
+        #             print("\n")
+        #             print(all_grams_base_patterns)
+        #             print(all_grams_hpatterns)
+        #             print(all_grams)
+        #             exit()
+        #
+        #             # flatten the nested list
+        #             all_grams_base_patterns = [item for sublist in all_grams_base_patterns for item in sublist]
+        #             all_grams_hpatterns = [item for sublist in all_grams_hpatterns for item in sublist]
+        #             all_grams = [item for sublist in all_grams for item in sublist]
+        #
+        #             page_base_patterns.extend(all_grams_base_patterns)
+        #             page_hpatterns.extend(all_grams_hpatterns)
+        #             page_instances.extend(all_grams)
+        #
+        #     all_base_patterns.append(page_base_patterns)
+        #     all_hpatterns.append(page_hpatterns)
+        #     all_instances.append(page_instances)
+        #
+        # all_page_numbers = []
+        # for indx, _ in enumerate(all_instances):
+        #     all_page_numbers.append(list(np.full(len(_), indx + 1)))
 
-                    page_base_patterns.extend(all_grams_base_patterns)
-                    page_hpatterns.extend(all_grams_hpatterns)
-                    page_instances.extend(all_grams)
-
-            all_base_patterns.append(page_base_patterns)
-            all_hpatterns.append(page_hpatterns)
-            all_instances.append(page_instances)
-
-        all_page_numbers = []
-        for indx, _ in enumerate(all_instances):
-            all_page_numbers.append(list(np.full(len(_), indx + 1)))
-
+        #TODO timeit with list comp vs chain
         all_base_patterns_flattened = [item for sublist in all_base_patterns for item in sublist]
         all_hpatterns_flattened = [item for sublist in all_hpatterns for item in sublist]
         all_instances_flattened = [item for sublist in all_instances for item in sublist]
         all_page_numbers_flattened = [item for sublist in all_page_numbers for item in sublist]
 
-        all_pats_list = [all_base_patterns_flattened, all_hpatterns_flattened, all_instances_flattened, all_page_numbers_flattened]
+        all_pats_list = [all_base_patterns_flattened, all_hpatterns_flattened, all_instances_flattened,
+                         all_page_numbers_flattened] #for the sake of less typing
+
         # ======= get the longest pattern with the same support (keeps only the superset, based on minsup criteria)
         counted_patterns = collections.Counter(all_base_patterns_flattened)
         pruned_indices = self.get_pruned_indices(all_base_patterns_flattened, counted_patterns)
@@ -502,8 +602,10 @@ class KnowledgeExtractor(object):
             if pattern not in base_pattern_to_hpattern.keys():
                 base_pattern_to_hpattern[pattern] = hpattern
 
+
+        #check instance and page number, print out lengths to see where it's getting reduced. num_instances doesn't
+        #match the length of instances
         for pattern in aggregated_pattern_instance_mapping.keys():
-            #print("adding to df")
             self.current_patterns = self.current_patterns.append({'pattern_id': self.getID(),
                                                     'base_pattern': str(pattern),
                                                     'instances': str(aggregated_pattern_instance_mapping[pattern]),
@@ -517,5 +619,5 @@ class KnowledgeExtractor(object):
         self.apply_filters()
 
         #save the patterns
-        # self.current_patterns = self.current_patterns.replace(np.nan, '', regex=True)
-        # sel.fcurrent_patterns.to_csv('current_patterns.csv')
+        self.current_patterns = self.current_patterns.replace(np.nan, '', regex=True)
+        self.current_patterns.to_csv('current_patterns.csv')
