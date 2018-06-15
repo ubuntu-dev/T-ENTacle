@@ -303,7 +303,7 @@ if len(sys.argv) > 1:
 else:
     print("No file specified, using hardcoded path.")
     ### TODO ADD A PATH IN A FILE
-    filename = '/YOUR_FILE/YOUR_PDF'
+    filename = './.pdf'
 pdf_buffer=create_csv(filename)
 print(pdf_buffer)
 

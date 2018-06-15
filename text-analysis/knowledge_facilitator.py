@@ -15,7 +15,7 @@ import jellyfish
 from fuzzywuzzy import fuzz
 import dill
 import click
-
+import spacy
 
 # ========= Data structures, initializations and hyperparameters
 
@@ -231,7 +231,7 @@ def find_close_patterns(hpattern):
         confidence_flag_unit = 0
         confidence=0 # todo: give the best score here; will help decide the rank
         hpattern_iter=ast.literal_eval(str(row['hpattern']))
-        mask = str(row['mask'])
+        mask = str(row['mask']) #if the user selects 1 3 7 , the mask is the selected entities 1 3 7
         if mask == '':
             mask = []
         else:
@@ -629,7 +629,7 @@ def create_patterns_per_doc(parsed_text):
     aggregated_pattern_pagenumber_mapping={}
     base_pattern_to_hpattern={}
     for pattern, hpattern, instance, page_number in zip(all_base_patterns_flattened, all_hpatterns_flattened, all_instances_flattened,all_page_numbers_flattened):
-
+#all_instances_flattened - where all the instances in () are coming from in current_patterns (and all_patterns)
         # aggregate
         if pattern not in aggregated_pattern_instance_mapping.keys():
             aggregated_pattern_instance_mapping[pattern]=[]
