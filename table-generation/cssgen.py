@@ -23,7 +23,7 @@ def main():
         print(j, css)
         filename = str(j) + ".css"
 
-        fw = open("D:\\5thSemester_Summer2018\\PyHTML\\CSS\\"+str(filename), "w+")
+        fw = open("./CSS/"+str(filename), "w+")
         fw.write(str(css))
         fw.close()
 

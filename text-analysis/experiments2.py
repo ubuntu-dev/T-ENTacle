@@ -72,14 +72,17 @@ def parse_document(file_path):
             pdftext=''
 
         parsed_text.append(pdftext)
+    parsed_text = " ".join(parsed_text)
 
     return parsed_text.lower()
 
 
 
 nlp = spacy.load('en_core_web_sm')
-doc = parse_document('./.pdf')
+doc = parse_document('../.')
+print(doc[0:10000])
+tokenized = nlp(doc)
 
-for token in doc:
+for token in tokenized:
     print(token.text, token.lemma_, token.pos_, token.tag_, token.dep_,
           token.shape_, token.is_alpha, token.is_stop)
