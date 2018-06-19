@@ -14,6 +14,7 @@ import glob
 import sys
 import mxnet as mx
 import cv2
+import csv
 
 items = ("Item one", "Item two", "Item three", "Item four")
 paras = ("This was a fantastic list.", "And now for something completely different.")
@@ -44,12 +45,14 @@ def pdf_to_jpg(filepdf, name):
         imgs_c = Img.fromarray(imgs_c)
         path = './JPG/' + name + '_%s.jpg' % uuids
         imgs_c.save(path)
+        bounding_box(path)
         for i in list_im:
             os.remove(i)
-    return path
+    return bounding_box(path)
+    #return path
 
-def bounding_box():
-    im = cv2.imread('./JPG/0_12207.jpg')
+def bounding_box(image_file):
+    im = cv2.imread(image_file)
     im[im == 255] = 1
     im[im == 0] = 255
     im[im == 1] = 0
@@ -59,16 +62,29 @@ def bounding_box():
 
     cnt = contours[0]
     x,y,w,h = cv2.boundingRect(cnt) #The function calculates and returns the minimal up-right bounding rectangle for the specified point set.
-    print(str(x))
-    print(str(y))
-    print(str(w))
-    print(str(h))
+    x1 = x + (w-1)
+    y1 = y + (h-1)
+
+    out = [x, y, x1, y1]
+    print(out)
 
     rect = cv2.minAreaRect(cnt)
     box = cv2.boxPoints(rect)
-    print(box)
+
+    return out
+    #print(box)
+
+def write_to_csv(data_arr):
+    f = open('bounding_boxes.csv','w')
+    for i in range(len(data_arr)):
+        temp = data_arr[i]
+        for j in range(3):
+            f.write(str(temp[j]) + ', ')
+        f.write(str(temp[3]) + '\n')
+    f.close()
 
 
+bounding_boxes_ = []
 for x in os.listdir("./CSS"):
     page = mp.page()
     page.init(title="HTML Generator",
@@ -92,10 +108,9 @@ for x in os.listdir("./CSS"):
     fw.write(str(page))
     fw.close()
 
-    #table_to_pdf(file_)
-    #pdf_to_png(file_)
-    #pdf_to_jpg('./PDF/' + file_ + '.pdf', file_)
-bounding_box()
+    bounding_boxes_.append(pdf_to_jpg('./PDF/' + file_ + '.pdf', file_))
+
+write_to_csv(bounding_boxes_)
 
 end = time.time()
 print(end - start)
