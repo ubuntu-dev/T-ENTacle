@@ -1,4 +1,5 @@
 #! /usr/bin/python
+
 from __future__ import print_function
 import MarkupPy.markup as mp
 import webbrowser as web
@@ -89,7 +90,6 @@ for x in os.listdir("./CSS"):
     page = mp.page()
     page.init(title="HTML Generator",
               css=('../CSS/' + str(x)))
-
     page.table()
 
     for i in range(10):
@@ -103,8 +103,7 @@ for x in os.listdir("./CSS"):
 
     file_ = os.path.splitext(x)[0]
     filename = file_ + ".html"
-
-    fw = open("./HTML/"+filename, "w+")
+    fw = open("./HTML/" + filename, "w+")
     fw.write(str(page))
     fw.close()
 
