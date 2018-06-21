@@ -134,8 +134,10 @@ def word_similarity(s,t, type=''):
 
 def find_entites(hpattern, mask=[]):
     '''
-    aggrerate the words that are next to each other as an entity. Find multiple ones.
+    aggrerate the tokens that are next to each other as an entity. Finds multiple entities in a single pattern.
+    Uses the mask to discount the masked tokens.
     :param hpattern:
+    :param mask:
     :return:
     '''
 
@@ -164,6 +166,7 @@ def find_units(hpattern, mask=[]):
     '''
     find the units in the pattern
     :param hpattern:
+    :param mask:
     :return:
     '''
 
@@ -181,7 +184,9 @@ def find_units(hpattern, mask=[]):
 def find_values(instance, hpattern, mask=[]):
     '''
     find the values in the pattern
+    :param instance:
     :param hpattern:
+    :param mask:
     :return:
     '''
 
@@ -241,7 +246,7 @@ def find_close_patterns(hpattern):
 
         for entity_iter in entities_iter:
             for entity in entities:
-                if word_similarity(entity,entity_iter)>0.7:
+                if word_similarity(entity,entity_iter)>0.5:
                     confidence_flag_entity=1
 
         for unit_iter in units_iter:
@@ -403,13 +408,6 @@ def parse_document(file_path):
 
     return parsed_text
 
-def read_seed_matchings(path):
-    '''
-    read the user provided 'entity_name' : 'seed_aliases' : 'learned_aliases' and initialize the learned_patterns with it
-    :param path:
-    :return:
-    '''
-    global learned_patterns
 
 def filter1(row):
     '''
@@ -469,7 +467,7 @@ def filter4(row):
 def apply_filters(fltr):
     '''
     Apply filters to remove 'irrelevant' current patterns: see filter1 impl
-    :param: filter: a function
+    :param: fltr: a function
     :return:
     '''
 
@@ -534,9 +532,11 @@ def create_patterns_per_doc(parsed_text):
     global current_document_path
     global all_patterns
 
+    instance_order_temp=0
     all_hpatterns=[]
     all_base_patterns=[]
     all_instances = []
+    all_instances_orders = []
 
     for page in parsed_text:
         page_hpatterns=[]
@@ -547,11 +547,11 @@ def create_patterns_per_doc(parsed_text):
             # create chunks by dividing on commas+space, period+space (and multi-space??) so that patterns don't span beyond them
             # chunks=re.split(', |\. |\s{2,}',line)
             chunks = re.split(', |\. |;', line.lower())
-            # print(line,chunks)
+            # print(line, chunks)
 
             # remove commas from numbers (8,643), give valid spacing around #, = and @
             # tokenize everything based on spaces/tabs
-            # creates a list(token) of lists(chunk): [[token,token,token],[token,token]]
+            # creates a list(chunk) of lists(tokens): [[token,token,token],[token,token]]
             chunks = [
                 chunk.replace(",", "").replace("=", " = ").replace("@", " @ ").replace("#", " # ").replace("$", " $ ").
                     replace("°", " ° ").replace("%", " % ").replace("\"", " \" ").replace("'", " ' ").replace(":",
@@ -592,6 +592,8 @@ def create_patterns_per_doc(parsed_text):
         all_base_patterns.append(page_base_patterns)
         all_hpatterns.append(page_hpatterns)
         all_instances.append(page_instances)
+        all_instances_orders.append(list(range(instance_order_temp, instance_order_temp + len(page_instances))))
+        instance_order_temp+=len(page_instances)
 
 
     all_page_numbers=[]
@@ -602,6 +604,7 @@ def create_patterns_per_doc(parsed_text):
     all_hpatterns_flattened = [item for sublist in all_hpatterns for item in sublist]
     all_instances_flattened = [item for sublist in all_instances for item in sublist]
     all_page_numbers_flattened=[item for sublist in all_page_numbers for item in sublist]
+    all_instances_orders_flattened=[item for sublist in all_instances_orders for item in sublist]
 
     counted_patterns = collections.Counter(all_base_patterns_flattened)
 
@@ -627,16 +630,20 @@ def create_patterns_per_doc(parsed_text):
     # create a mapping from base pattern to hpattern
     aggregated_pattern_instance_mapping={}
     aggregated_pattern_pagenumber_mapping={}
+    aggregated_pattern_order_mapping = {}
     base_pattern_to_hpattern={}
-    for pattern, hpattern, instance, page_number in zip(all_base_patterns_flattened, all_hpatterns_flattened, all_instances_flattened,all_page_numbers_flattened):
+    for pattern, hpattern, instance, page_number, instance_order in zip(all_base_patterns_flattened, all_hpatterns_flattened, all_instances_flattened,all_page_numbers_flattened, all_instances_orders_flattened):
 
         # aggregate
         if pattern not in aggregated_pattern_instance_mapping.keys():
             aggregated_pattern_instance_mapping[pattern]=[]
             aggregated_pattern_pagenumber_mapping[pattern]=[]
+            aggregated_pattern_order_mapping[pattern]=[]
+
 
         aggregated_pattern_instance_mapping[pattern].append(instance)
         aggregated_pattern_pagenumber_mapping[pattern].append(page_number)
+        aggregated_pattern_order_mapping[pattern].append(instance_order)
 
         # mapping
         if pattern not in base_pattern_to_hpattern.keys():
@@ -646,9 +653,9 @@ def create_patterns_per_doc(parsed_text):
     for pattern in aggregated_pattern_instance_mapping.keys():
         if pattern in filtered_patterns:
             pattern_id=getID()
-
+            #
             current_patterns=current_patterns.append({'pattern_id':pattern_id,'base_pattern':str(pattern),'instances':str(aggregated_pattern_instance_mapping[pattern]),
-                                 'page_numbers':aggregated_pattern_pagenumber_mapping[pattern],'hpattern':str(base_pattern_to_hpattern[pattern]),'document_name':current_document,'num_instances':counted_patterns[pattern]}, ignore_index=True)
+                                 'page_numbers':aggregated_pattern_pagenumber_mapping[pattern],'instances_orders':str(aggregated_pattern_order_mapping[pattern]),'hpattern':str(base_pattern_to_hpattern[pattern]),'document_name':current_document,'num_instances':counted_patterns[pattern]}, ignore_index=True)
 
 
 
@@ -678,9 +685,8 @@ def find_interesting_patterns():
 def init(file_path, fresh=False):
     '''
     initialize and load all the relevant dataframes and datastructures
-    param:
-    file_path
-    fresh : if True then initialize everything anew
+    :param file_path
+    :param fresh : if True then initialize everything anew
     :return:
     '''
 
@@ -846,8 +852,9 @@ def update_learn_pattern(entity_name, pattern_id, mask):
     based on user choice add a mask for the pattern
     1. update the pattern data structures for the masks
     2. add pattern id to the learning data structure
+    :param entity_name:
     :param pattern_id:
-    :param choice:
+    :param mask:
     :return:
     '''
 
@@ -881,6 +888,7 @@ def interact_for_single_entity(entity_name, strict=False, auto_skip=False):
     4. just skip that entity, put it in the report
     :param entity_name:
     :param strict:
+    :param auto_skip:
     :return:
     '''
 
@@ -978,6 +986,9 @@ def single_doc_cli(file_path, list_of_entity_names=[], strict=False, auto_skip=F
     '''
     controls the flow of the CLI
     :param file_path:
+    :param list_of_entity_names:
+    :param strict:
+    :param auto_skip:
     :return:
     '''
 
@@ -1004,7 +1015,7 @@ def single_doc_cli(file_path, list_of_entity_names=[], strict=False, auto_skip=F
 @click.option('--a/--no-a', default=False, help='choose --a to auto skip exact patterns when in interactive mode. False by default.')
 @click.option('--f/--no-f', default=False, help='choose --f to start fresh (all previous learning will be removed)')
 @click.option('--e', help='give the path to the list of entities. One entity per line.')
-def cli(path, i, a, f, e=''):
+def cli(path, i, a, f, e):
     '''
         detct if dir of file and accordingly iterates or not over multiple docs
         :param file_path:
@@ -1016,7 +1027,7 @@ def cli(path, i, a, f, e=''):
 
     strict=not i
 
-    if e!='':
+    if e!=None:
         list_of_entity_names=open(e,'r').readlines()
         list_of_entity_names=[name.strip() for name in list_of_entity_names]
     else:
