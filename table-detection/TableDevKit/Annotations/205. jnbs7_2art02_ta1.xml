@@ -1,0 +1,26 @@
+<annotation>
+	<folder>train</folder>
+	<filename>205. jnbs7_2art02_ta1.jpg</filename>
+	<path>/media/sf_5thSemester_Summer2018/TableDevKit/train/205. jnbs7_2art02_ta1.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>512</width>
+		<height>527</height>
+		<depth>1</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>6</xmin>
+			<ymin>5</ymin>
+			<xmax>496</xmax>
+			<ymax>515</ymax>
+		</bndbox>
+	</object>
+</annotation>

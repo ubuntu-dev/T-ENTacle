@@ -1,0 +1,26 @@
+<annotation>
+	<folder>train</folder>
+	<filename>33. table-2-characterizing-hydraulic-fractures-in-shale-gas.jpg</filename>
+	<path>/media/sf_5thSemester_Summer2018/TableDevKit/train/33. table-2-characterizing-hydraulic-fractures-in-shale-gas.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>1248</width>
+		<height>342</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>1</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>3</xmin>
+			<ymin>47</ymin>
+			<xmax>1243</xmax>
+			<ymax>342</ymax>
+		</bndbox>
+	</object>
+</annotation>

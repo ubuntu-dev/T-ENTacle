@@ -1,0 +1,26 @@
+<annotation>
+	<folder>train</folder>
+	<filename>266. from1993huskyoilsgasmigrationresearcheffortanupdate.jpg</filename>
+	<path>/media/sf_5thSemester_Summer2018/TableDevKit/train/266. from1993huskyoilsgasmigrationresearcheffortanupdate.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>997</width>
+		<height>497</height>
+		<depth>1</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>32</xmin>
+			<ymin>82</ymin>
+			<xmax>961</xmax>
+			<ymax>414</ymax>
+		</bndbox>
+	</object>
+</annotation>

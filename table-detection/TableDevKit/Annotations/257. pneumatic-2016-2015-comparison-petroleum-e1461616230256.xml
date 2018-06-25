@@ -1,0 +1,26 @@
+<annotation>
+	<folder>train</folder>
+	<filename>257. pneumatic-2016-2015-comparison-petroleum-e1461616230256.jpg</filename>
+	<path>/media/sf_5thSemester_Summer2018/TableDevKit/train/257. pneumatic-2016-2015-comparison-petroleum-e1461616230256.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>600</width>
+		<height>226</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>13</xmin>
+			<ymin>5</ymin>
+			<xmax>555</xmax>
+			<ymax>172</ymax>
+		</bndbox>
+	</object>
+</annotation>

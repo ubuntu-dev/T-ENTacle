@@ -1,0 +1,26 @@
+<annotation>
+	<folder>train</folder>
+	<filename>16. screen-shot-2014-04-07-at-12.53.415.png</filename>
+	<path>/media/sf_5thSemester_Summer2018/TableDevKit/train/16. screen-shot-2014-04-07-at-12.53.415.png</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>608</width>
+		<height>562</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>8</xmin>
+			<ymin>14</ymin>
+			<xmax>600</xmax>
+			<ymax>421</ymax>
+		</bndbox>
+	</object>
+</annotation>

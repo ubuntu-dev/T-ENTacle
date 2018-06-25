@@ -1,0 +1,26 @@
+<annotation>
+	<folder>train</folder>
+	<filename>206. november2017opecproductionandtargetsasofoctoberviaplatts.jpg</filename>
+	<path>/media/sf_5thSemester_Summer2018/TableDevKit/train/206. november2017opecproductionandtargetsasofoctoberviaplatts.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>660</width>
+		<height>469</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>1</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>3</xmin>
+			<ymin>1</ymin>
+			<xmax>660</xmax>
+			<ymax>420</ymax>
+		</bndbox>
+	</object>
+</annotation>

@@ -1,0 +1,26 @@
+<annotation>
+	<folder>train</folder>
+	<filename>183. classification_of_error.png</filename>
+	<path>/media/sf_5thSemester_Summer2018/TableDevKit/train/183. classification_of_error.png</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>400</width>
+		<height>369</height>
+		<depth>1</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>6</xmin>
+			<ymin>5</ymin>
+			<xmax>394</xmax>
+			<ymax>363</ymax>
+		</bndbox>
+	</object>
+</annotation>

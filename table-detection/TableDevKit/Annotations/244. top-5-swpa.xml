@@ -1,0 +1,26 @@
+<annotation>
+	<folder>train</folder>
+	<filename>244. top-5-swpa.png</filename>
+	<path>/media/sf_5thSemester_Summer2018/TableDevKit/train/244. top-5-swpa.png</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>683</width>
+		<height>340</height>
+		<depth>1</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>4</xmin>
+			<ymin>7</ymin>
+			<xmax>682</xmax>
+			<ymax>308</ymax>
+		</bndbox>
+	</object>
+</annotation>

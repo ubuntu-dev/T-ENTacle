@@ -1,0 +1,26 @@
+<annotation>
+	<folder>train</folder>
+	<filename>282. wva-study5-e1504710635493.jpg</filename>
+	<path>/media/sf_5thSemester_Summer2018/TableDevKit/train/282. wva-study5-e1504710635493.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>600</width>
+		<height>528</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>14</xmin>
+			<ymin>15</ymin>
+			<xmax>568</xmax>
+			<ymax>492</ymax>
+		</bndbox>
+	</object>
+</annotation>
