@@ -1,0 +1,26 @@
+<annotation>
+	<folder>train</folder>
+	<filename>14. dartmouth-study-geographic-dispersion-of-economic-shocks-evidence-from-the-fracking-revolution-34-638.jpg</filename>
+	<path>/media/sf_5thSemester_Summer2018/TableDevKit/train/14. dartmouth-study-geographic-dispersion-of-economic-shocks-evidence-from-the-fracking-revolution-34-638.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>638</width>
+		<height>493</height>
+		<depth>1</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>89</xmin>
+			<ymin>103</ymin>
+			<xmax>539</xmax>
+			<ymax>348</ymax>
+		</bndbox>
+	</object>
+</annotation>

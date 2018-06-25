@@ -1,0 +1,26 @@
+<annotation>
+	<folder>train</folder>
+	<filename>141. cows+dead+from+fracking+%252b+frack+fluid+kills+cows+%252b+fracking+liquid+%252b+wtfrack.org+%252b+cornell+study+%252b+.jpg</filename>
+	<path>/media/sf_5thSemester_Summer2018/TableDevKit/train/141. cows+dead+from+fracking+%252b+frack+fluid+kills+cows+%252b+fracking+liquid+%252b+wtfrack.org+%252b+cornell+study+%252b+.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>669</width>
+		<height>495</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>5</xmin>
+			<ymin>71</ymin>
+			<xmax>657</xmax>
+			<ymax>433</ymax>
+		</bndbox>
+	</object>
+</annotation>

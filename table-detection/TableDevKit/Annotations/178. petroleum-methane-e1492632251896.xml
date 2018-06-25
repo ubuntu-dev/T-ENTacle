@@ -1,0 +1,38 @@
+<annotation>
+	<folder>train</folder>
+	<filename>178. petroleum-methane-e1492632251896.jpg</filename>
+	<path>/media/sf_5thSemester_Summer2018/TableDevKit/train/178. petroleum-methane-e1492632251896.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>600</width>
+		<height>649</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>26</xmin>
+			<ymin>14</ymin>
+			<xmax>585</xmax>
+			<ymax>280</ymax>
+		</bndbox>
+	</object>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>19</xmin>
+			<ymin>296</ymin>
+			<xmax>572</xmax>
+			<ymax>568</ymax>
+		</bndbox>
+	</object>
+</annotation>

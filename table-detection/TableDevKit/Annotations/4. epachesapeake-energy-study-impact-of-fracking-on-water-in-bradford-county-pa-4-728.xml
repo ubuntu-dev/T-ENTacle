@@ -1,0 +1,50 @@
+<annotation>
+	<folder>train</folder>
+	<filename>4. epachesapeake-energy-study-impact-of-fracking-on-water-in-bradford-county-pa-4-728.jpg</filename>
+	<path>/media/sf_5thSemester_Summer2018/TableDevKit/train/4. epachesapeake-energy-study-impact-of-fracking-on-water-in-bradford-county-pa-4-728.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>728</width>
+		<height>943</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>79</xmin>
+			<ymin>100</ymin>
+			<xmax>648</xmax>
+			<ymax>361</ymax>
+		</bndbox>
+	</object>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>76</xmin>
+			<ymin>377</ymin>
+			<xmax>652</xmax>
+			<ymax>634</ymax>
+		</bndbox>
+	</object>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>78</xmin>
+			<ymin>674</ymin>
+			<xmax>654</xmax>
+			<ymax>807</ymax>
+		</bndbox>
+	</object>
+</annotation>

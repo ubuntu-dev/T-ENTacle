@@ -1,0 +1,26 @@
+<annotation>
+	<folder>train</folder>
+	<filename>267. slide18.png</filename>
+	<path>/media/sf_5thSemester_Summer2018/TableDevKit/train/267. slide18.png</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>720</width>
+		<height>540</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>20</xmin>
+			<ymin>7</ymin>
+			<xmax>701</xmax>
+			<ymax>532</ymax>
+		</bndbox>
+	</object>
+</annotation>
