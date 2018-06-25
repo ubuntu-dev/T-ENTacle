@@ -9,6 +9,7 @@ class Pattern(object):
     WORD = 'Word~'
     DIGI = 'Digi~'
     UNIT = 'Unit~'
+    DATE = 'Date~'
     prepos = ['aboard', 'about', 'above', 'across', 'after', 'against', 'along', 'amid', 'among', 'anti', 'around',
               'as',
               'at', 'before', 'behind', 'below', 'beneath', 'beside', 'besides', 'between', 'beyond', 'but', 'by',
@@ -35,13 +36,20 @@ class Pattern(object):
         self.page_nums = [page_num]
         self.doc_name = doc_name
 
+    def is_date(self, token):
+        if re.search(r"\\\d{1,2}\\\d{1,2}\\\d{2,4}", token):
+            return True
+        else:
+            return False
+
     def has_numeric(self, token):
         if re.search(r"\d", token):
             return True
         else:
             return False
 
-    def ispunc(self, s):
+
+    def is_punc(self, s):
         if re.match('[^a-zA-Z\d]', s):
             return True
         return False
@@ -59,7 +67,8 @@ class Pattern(object):
             #print(token)
             if token in Pattern.prepos:
                 signature.append((token, token, Pattern.PREP))
-            # elif token.isnumeric():
+            elif self.is_date(token):
+                signature.append(token, Pattern.DATE, Pattern.DATE)
             elif self.has_numeric(token):
                 signature.append((token, Pattern.DIGI, Pattern.DIGI))
             elif token.isalpha():
@@ -69,7 +78,7 @@ class Pattern(object):
                 signature.append(tuple(sign))
 
             #maybe use spacy or nltk instead of ispunc
-            elif self.ispunc(token):
+            elif self.is_punc(token):
                 signature.append((token, token, Pattern.PUNC))
             else:
                 if token:
