@@ -15,6 +15,7 @@ import jellyfish
 from fuzzywuzzy import fuzz
 import dill
 import click
+from report_pattern_analysis import rec_separate
 
 
 # ========= Data structures, initializations and hyperparameters
@@ -384,9 +385,6 @@ def matcher_bo_value(entity_value):
 
 def parse_document(file_path):
 
-    global current_document
-    current_document=file_path.split('/')[-1]
-
     parsed_text=[]
     # create a dir for dumping split pdfs
     if os.path.exists('./temp'):
@@ -529,8 +527,7 @@ def create_patterns_per_doc(parsed_text):
     :return:
     '''
     global current_patterns
-    global current_document_path
-    global all_patterns
+    global current_document
 
     instance_order_temp=0
     all_hpatterns=[]
@@ -706,7 +703,7 @@ def init(file_path, fresh=False):
               'and', 'or']
     units = ['ft', 'gal', 'ppa', 'psi', 'lbs', 'lb', 'bpm', 'bbls', 'bbl', '\'', "\"", "'", "°", "$", 'hrs']
     punc = set(string.punctuation)
-
+    if_seen_document_before=False
     threshold = 10
     # save state across documents
     if os.path.exists('counter'):
@@ -715,6 +712,9 @@ def init(file_path, fresh=False):
         counter = 0
     print('counter',counter)
     current_document_path = ''
+
+    global current_document
+    current_document = file_path.split('/')[-1]
 
     # entity matchings for all the documents processed so far
     if os.path.exists('learned_patterns.csv'):
@@ -727,26 +727,35 @@ def init(file_path, fresh=False):
     if os.path.exists('all_patterns.csv'):
         all_patterns = pd.read_csv('all_patterns.csv', index_col=0)
         all_patterns = all_patterns.replace(np.nan, '', regex=True)
+        current_document = file_path.split('/')[-1]
+        if len(all_patterns[all_patterns['document_name']==current_document])!=0:
+            if_seen_document_before=True
     else:
         all_patterns = pd.DataFrame(
             columns=['pattern_id', 'base_pattern', 'instances', 'hpattern', 'document_name', 'num_instances', 'mask','page_numbers'])
 
-    # pattern information about just the current pdf/document
-    current_patterns = pd.DataFrame(
-        columns=['pattern_id', 'base_pattern', 'instances', 'hpattern', 'document_name', 'num_instances', 'mask','page_numbers'])
 
-    other_patterns = pd.DataFrame(columns=['hpattern', 'instances', 'document_name'])
+    if if_seen_document_before:
+        print('Seen the document before. Loading patterns.: ' + current_document)
+        current_patterns = all_patterns[all_patterns['document_name']==current_document]
+        current_patterns.reset_index(drop=True)
+    else:
+        current_patterns = pd.DataFrame(
+            columns=['pattern_id', 'base_pattern', 'instances', 'hpattern', 'document_name', 'num_instances', 'mask',
+                     'page_numbers'])
 
-    parsed_text = parse_document(file_path)
+        other_patterns = pd.DataFrame(columns=['hpattern', 'instances', 'document_name'])
 
-    print('Creating patterns for the document: '+file_path)
-    create_patterns_per_doc(parsed_text)
+        parsed_text = parse_document(file_path)
 
-    # todo: remove this, just for testing, uncomment above
-    # current_patterns= pd.read_csv('current_patterns.csv',index_col=0)
-    # current_patterns = current_patterns.replace(np.nan, '', regex=True)
+        print('Creating patterns for the document: ' + current_document)
+        create_patterns_per_doc(parsed_text)
 
-    all_patterns = pd.concat([all_patterns, current_patterns])
+        # todo: remove this, just for testing, uncomment above
+        # current_patterns= pd.read_csv('current_patterns.csv',index_col=0)
+        # current_patterns = current_patterns.replace(np.nan, '', regex=True)
+
+        all_patterns = pd.concat([all_patterns, current_patterns])
 
 def close():
     '''
@@ -761,13 +770,14 @@ def close():
     # all_patterns=pd.concat([all_patterns, current_patterns]) # done in init() now
     # all_patterns.to_csv('all_patterns.csv')
     savemodel(counter,'counter')
-    build_report()
+    build_report_pagewise()
+    # build_report_w_smart_align()
     # todo: add the finding of 'interesting' patterns
 
 
 # ==================================== report building
 
-def build_report():
+def build_report_pagewise():
     '''
     when the training is done, build the report based on the learned structures
     :return:
@@ -838,6 +848,57 @@ def build_report():
     report=report.sort_values(by=['document name','page number'])
     report.to_csv('report.csv')
 
+def build_report_w_smart_align():
+
+    stage_name = "stage"
+    global all_patterns
+    global learned_patterns
+
+    # initialize by random entity names
+    all_patterns['entity_name'] = pd.Series(np.random.randn(len(all_patterns)), index=all_patterns.index)
+    # print(all_patterns['entity_name'])
+
+    all_pattern_ids = []
+    print(learned_patterns)
+    for index, row in learned_patterns.iterrows():
+        entity_name = row['entity_name']
+        pattern_ids = ast.literal_eval(str(row['pattern_ids']))
+        all_pattern_ids.extend(pattern_ids)
+        for id in pattern_ids:
+            all_patterns.loc[all_patterns['pattern_id'] == id, 'entity_name'] = entity_name
+
+    all_patterns = all_patterns[all_patterns['pattern_id'].isin(all_pattern_ids)]
+    all_patterns = all_patterns.reset_index(drop=True)
+
+    entities = set(all_patterns['entity_name'])
+    series = pd.DataFrame()
+
+    for entity in entities:
+        instances_orders = ast.literal_eval(
+            str(list(all_patterns[all_patterns['entity_name'] == entity]['instances_orders'])[0]))
+        instances = ast.literal_eval(str(list(all_patterns[all_patterns['entity_name'] == entity]['instances'])[0]))
+        entity_names = [entity] * len(instances)
+        df = pd.DataFrame(
+            data={"instances_orders": instances_orders, "instances": instances, "entity_name": entity_names})
+        series = pd.concat([series, df])
+
+    series = series.sort_values(by=['instances_orders'])
+    series = series.reset_index(drop=True)
+    print(list(series['entity_name']))
+    records, indices = rec_separate(list(series['entity_name']), stage_name)
+    print(records, indices)
+
+    separated_records = pd.DataFrame(columns=list(entities))
+
+    for record_index in indices:
+        tempdict = {}
+        for index in record_index:
+            entity_name = series.loc[index]['entity_name']
+            instances = series.loc[index]['instances']
+            tempdict[entity_name] = instances
+        separated_records = separated_records.append(tempdict, ignore_index=True)
+
+    separated_records.to_csv('report.csv')
 
 # ==================================== CLI : command line functions
 
@@ -1048,24 +1109,40 @@ def cli(path, i, a, f, e):
 
 cli()
 
-# Example Commands:
+# # Example Commands:
+
+# fully interactive: engages the user for every entity for every document
+# python knowledge_facilitator.py --f --i --e entity_name.txt '/path/to/the/pdf/name_of_the_pdf.pdf'
+# python knowledge_facilitator.py --f --i --e entity_name.txt '/directory/to/the/pdfs'
 # python knowledge_facilitator.py --i --e entity_name.txt '/path/to/the/pdf/name_of_the_pdf.pdf'
+# python knowledge_facilitator.py --i --e entity_name.txt '/directory/to/the/pdfs'
+
+# semi-automatic: engages the user atleast once for each entity (if not learned already). And henceforth, only when the exact pattern for a learned entity is not present in a document
+# python knowledge_facilitator.py --i --a --e entity_name.txt '/path/to/the/pdf/name_of_the_pdf.pdf'
 # python knowledge_facilitator.py --i --a --e entity_name.txt '/directory/to/the/pdfs'
+
+# fully-automatic: does not engage the user. Extracts based on what is learned. When confused, Skips.
+# python knowledge_facilitator.py --a --e entity_name.txt '/path/to/the/pdf/name_of_the_pdf.pdf'
+# python knowledge_facilitator.py --a --e entity_name.txt '/directory/to/the/pdfs'
 
 
 # ====================================================== TODOS
+
+# 19. record separation: do for multi documents
+# 20. record separation: make sure 'stage' is used as an entity!!
 
 # 9. do the interesting patterns
 # 11. add more documentation of functions
 # 12. add more logs
 # 13. add an option to select all tokens
 # 14. make it pip installable
-# 15. caching by doc name
 # 16. put a command line flag for just reports
 # 17. when suggesting tokens to users, get rid of the punctuations (all punctuation within two selected things will be automatically true)
 # 2. island the numbers together when outputting to the report (update the function find_values) : 80 . 6
 # 4. instances to the user are not getting ranked (for later)
-
+# 18. because ATP : 80 .6 is a different pattern than ATP : 80 for the code,
+#       these two similar instances are not getting captured as part of the same pattern!! resulting in missing values in the report.
+#       This will also occur for instances split arbitrarily due to the new line.
 
 
 
