@@ -70,5 +70,5 @@ The software is sensitive to these difference and tries not to assume anything a
 
   
 ## The diagram shows the User interaction, Process and Data Flow for the KE:
-![Flow Diagram](https://github.com/nasa-jpl/T-ENTacle/blob/master/text-analysis/flow.jpg)
+![Flow Diagram](https://github.com/nasa-jpl/T-ENTacle/blob/master/flow.jpg)
   
