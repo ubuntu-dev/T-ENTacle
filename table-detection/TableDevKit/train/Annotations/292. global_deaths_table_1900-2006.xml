@@ -1,0 +1,26 @@
+<annotation>
+	<folder>train</folder>
+	<filename>292. global_deaths_table_1900-2006.png</filename>
+	<path>/media/sf_5thSemester_Summer2018/TableDevKit/train/292. global_deaths_table_1900-2006.png</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>1018</width>
+		<height>457</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>10</xmin>
+			<ymin>42</ymin>
+			<xmax>1009</xmax>
+			<ymax>396</ymax>
+		</bndbox>
+	</object>
+</annotation>

@@ -1,0 +1,26 @@
+<annotation>
+	<folder>train</folder>
+	<filename>32. 0122-5383-ctyf-7-01-00005-gt2.png</filename>
+	<path>/media/sf_5thSemester_Summer2018/TableDevKit/train/32. 0122-5383-ctyf-7-01-00005-gt2.png</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>846</width>
+		<height>738</height>
+		<depth>1</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>1</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>5</xmin>
+			<ymin>2</ymin>
+			<xmax>846</xmax>
+			<ymax>734</ymax>
+		</bndbox>
+	</object>
+</annotation>

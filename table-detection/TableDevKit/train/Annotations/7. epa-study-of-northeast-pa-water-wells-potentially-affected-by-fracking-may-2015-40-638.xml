@@ -1,0 +1,26 @@
+<annotation>
+	<folder>train</folder>
+	<filename>7. epa-study-of-northeast-pa-water-wells-potentially-affected-by-fracking-may-2015-40-638.jpg</filename>
+	<path>/media/sf_5thSemester_Summer2018/TableDevKit/train/7. epa-study-of-northeast-pa-water-wells-potentially-affected-by-fracking-may-2015-40-638.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>638</width>
+		<height>826</height>
+		<depth>1</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>88</xmin>
+			<ymin>119</ymin>
+			<xmax>554</xmax>
+			<ymax>268</ymax>
+		</bndbox>
+	</object>
+</annotation>

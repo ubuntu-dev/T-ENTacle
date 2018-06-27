@@ -1,0 +1,50 @@
+<annotation>
+	<folder>train</folder>
+	<filename>139. ghgi-2016-2017-2015-ng-methane-e1492629841206.jpg</filename>
+	<path>/media/sf_5thSemester_Summer2018/TableDevKit/train/139. ghgi-2016-2017-2015-ng-methane-e1492629841206.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>600</width>
+		<height>723</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>34</xmin>
+			<ymin>29</ymin>
+			<xmax>581</xmax>
+			<ymax>192</ymax>
+		</bndbox>
+	</object>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>38</xmin>
+			<ymin>242</ymin>
+			<xmax>556</xmax>
+			<ymax>392</ymax>
+		</bndbox>
+	</object>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>30</xmin>
+			<ymin>454</ymin>
+			<xmax>565</xmax>
+			<ymax>641</ymax>
+		</bndbox>
+	</object>
+</annotation>

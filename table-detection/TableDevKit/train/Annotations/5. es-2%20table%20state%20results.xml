@@ -1,0 +1,26 @@
+<annotation>
+	<folder>train</folder>
+	<filename>5. es-2%20table%20state%20results.jpg</filename>
+	<path>/media/sf_5thSemester_Summer2018/TableDevKit/train/5. es-2%20table%20state%20results.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>480</width>
+		<height>257</height>
+		<depth>1</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>6</xmin>
+			<ymin>4</ymin>
+			<xmax>476</xmax>
+			<ymax>253</ymax>
+		</bndbox>
+	</object>
+</annotation>

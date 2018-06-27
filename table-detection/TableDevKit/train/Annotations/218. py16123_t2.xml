@@ -1,0 +1,26 @@
+<annotation>
+	<folder>train</folder>
+	<filename>218. py16123_t2.png</filename>
+	<path>/media/sf_5thSemester_Summer2018/TableDevKit/train/218. py16123_t2.png</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>1132</width>
+		<height>214</height>
+		<depth>1</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>fracking table</name>
+		<pose>Unspecified</pose>
+		<truncated>1</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>1</xmin>
+			<ymin>2</ymin>
+			<xmax>1132</xmax>
+			<ymax>212</ymax>
+		</bndbox>
+	</object>
+</annotation>
