@@ -13,6 +13,7 @@ import spacy
 import dill
 import timeit
 import os
+import utils
 
 """
 right now, works on one document at a time, but could move patterns dataframe to a class variable 
@@ -23,8 +24,10 @@ Check for entities like currency, date, numbers
 See if there is a better way to tokenize with spacy or something
 
 TODO: 
+keep dictionary of pattern objects, key is id
 1. consider making threshold mutable by the user
 2. currently filters out patterns that don't have numbers. Are there any strings that should be left in?
+3. add a way for user to add seed aliases
 """
 class KnowledgeExtractor(object):
     PREP = "Prep~"
@@ -46,7 +49,6 @@ class KnowledgeExtractor(object):
                    'under', 'underneath', 'unlike', 'until', 'up', 'upon', 'versus', 'via', 'with', 'within', 'without',
                    'and', 'or']
     punc = set(string.punctuation)
-    counter = 0
     nlp = spacy.load('en')
     # could be made more robust by taking the list of units from grobid. This is certainly not comprehensive
     units = ['ft', 'gal', 'ppa', 'psi', 'lbs', 'lb', 'bpm', 'bbls', 'bbl', '\'', "\"", "'", "°", "$", 'hrs']
@@ -55,40 +57,51 @@ class KnowledgeExtractor(object):
     def __init__(self, threshold=10):
         # save state across documents
         if os.path.exists('counter'):
-            with open('counter', 'rb') as f:
-                self.counter = dill.load(f)
+            self.counter = utils.load('counter')
         else:
             self.counter = 0
         ##################################
         #these should perhaps become class variables
         # entity matchings for all the documents processed so far
         if os.path.exists('learned_patterns.csv'):
-            self.learned_patterns = pd.read_csv('learned_patterns.csv', index_col=0)
-            self.learned_patterns.replace(np.nan, '', regex=True, inplace=True)
+            self.learned_patterns_df = pd.read_csv('learned_patterns.csv', index_col=0)
+            self.learned_patterns_df.replace(np.nan, '', regex=True, inplace=True)
         else:
-            self.learned_patterns = pd.DataFrame(columns=['entity_name', 'seed_aliases', 'pattern_ids'])
+            self.learned_patterns_df = pd.DataFrame(columns=['entity_name', 'seed_aliases', 'pattern_ids'])
+        if os.path.exists("learned_patterns.pkl"):
+            self.learned_patterns = utils.load("learned_patterns.pkl")
+        else:
+            self.learned_patterns = {}
 
         # pattern information about all the patterns seen so far from all the documents processed
-        if os.path.exists('all_patterns.csv'):
-            self.all_patterns = pd.read_csv('all_patterns.csv', index_col=0)
-            self.all_patterns.replace(np.nan, '', regex=True, inplace=True)
+        # if os.path.exists('all_patterns.csv'):
+        #     self.all_patterns = pd.read_csv('all_patterns.csv', index_col=0)
+        #     self.all_patterns.replace(np.nan, '', regex=True, inplace=True)
+        # else:
+        #     self.all_patterns = pd.DataFrame(
+        #         columns=['pattern_id', 'base_pattern', 'instances', 'hpattern', 'document_name', 'num_instances',
+        #                  'mask', 'page_numbers'])
+        if os.path.exists('all_patterns.pkl'):
+            self.all_patterns = utils.load('all_patterns.pkl') #dictionary of pattern objects. key is hpattern
         else:
-            self.all_patterns = pd.DataFrame(
-                columns=['pattern_id', 'base_pattern', 'instances', 'hpattern', 'document_name', 'num_instances',
-                         'mask', 'page_numbers'])
+            self.all_patterns = {}
         #####################################
-
+        #TODO refactor, move away from DF of current_patterns and move to list of pattern objects
         self.current_patterns = pd.DataFrame(columns=['pattern_id', 'base_pattern', 'instances', 'hpattern',
                                                       'document_name', 'num_instances', 'mask','page_numbers'])
+        self.current_patterns.index.name = 'id'
         self.threshold = threshold
 
-    def getID(self):
+        self.curr_patterns = {}
+
+
+    def makeID(self):
         """
         creates an id for each pattern by incrementing the class var counter
         :return: counter
         """
-        KnowledgeExtractor.counter += 1
-        return KnowledgeExtractor.counter
+        self.counter += 1
+        return self.counter
 
 
     def clean_text(self, text):
@@ -333,6 +346,7 @@ class KnowledgeExtractor(object):
             if p.base_pattern not in aggregated.keys():
                 aggregated[p.base_pattern] = p
             else:
+                aggregated[p.base_pattern].add(p.location)
                 aggregated[p.base_pattern].add_instance(p.instance)
                 aggregated[p.base_pattern].add_page_num(p.page_num)
         return list(aggregated.values())
@@ -419,6 +433,25 @@ class KnowledgeExtractor(object):
         print('FILTERED! now number of patterns: ', len(patterns))
         return patterns
 
+    def add_curr_to_all_patterns(self):
+        """
+        Merges current_patterns with all_patterns. All previously found patterns get updated with the new instances
+        found in the current document. This keeps the patterns aggregated by their base_pattern
+        :return:
+        """
+        #check if all_patterns is empty. Then Knowledge Extractor has not learned anything
+        #and we should just set all patterns to curr_patterns
+        if not self.all_patterns:
+            print("Setting allpatterns for the first time")
+            self.all_patterns = copy.deepcopy(self.curr_patterns)
+            return
+        for basepattern in self.curr_patterns.keys():
+            if basepattern in self.all_patterns:
+                #update all_patterns with the additional instances and documents
+                self.all_patterns[basepattern].add(self.curr_patterns[basepattern].location)
+            else:
+                self.all_patterns[basepattern] = self.curr_patterns[basepattern]
+
     def create_patterns_per_doc(self, parsed_text, doc_name = None):
         '''
         The main driver of knowledge extractor which searches for patterns in a given text.
@@ -451,7 +484,7 @@ class KnowledgeExtractor(object):
                 chunks = [self.break_natural_boundaries(chunk) for chunk in chunks]
 
                 #create n-grams out of every chunk and patterns for each n-gram
-                n_gram_range = (3, 4, 5, 6, 7)
+                n_gram_range = (2, 3, 4, 5, 6, 7)
                 for chunk in chunks:
                     if not chunk:
                         continue
@@ -460,7 +493,7 @@ class KnowledgeExtractor(object):
                     all_grams = []
                     for lst in all_grams_nested: all_grams += lst
                     #print("all grams ", all_grams)
-                    n_gram_patterns = list(map(lambda text: Pattern(text, page_num, doc_name), all_grams)) #list of pattern objects
+                    n_gram_patterns = list(map(lambda text: Pattern(text, page_num, doc_name, self.makeID()), all_grams)) #list of pattern objects
                     patterns.extend(n_gram_patterns)
 
         #Filter, prune, and aggregate pattern instances
@@ -469,8 +502,11 @@ class KnowledgeExtractor(object):
         #get the longest pattern with the same support (keeps only the superset, based on minsup criteria)
         pattern_subset = self.prune(filtered_patterns)
 
-        # #aggregate all of the patterns
+        #group all of the pattern instances by their base_pattern
         aggregated_patterns = self.aggregate_patterns(pattern_subset)
+
+        #keep dictionary of pattern objects
+        self.curr_patterns = {p.base_pattern: p for p in aggregated_patterns}
 
         #create a dataframe of all the patterns
         self.current_patterns = pd.concat([self.current_patterns,
@@ -478,4 +514,115 @@ class KnowledgeExtractor(object):
 
         #save the patterns
         self.current_patterns = self.current_patterns.replace(np.nan, '', regex=True)
-        self.current_patterns.to_csv('current_patterns.csv', index=False)
+        self.current_patterns.to_csv('current_patterns.csv')
+
+        #merge patterns with all the other patterns. If we have seen the same patterns before, they should just
+        #be added based on their base_pattern
+        self.add_curr_to_all_patterns()
+        #self.all_patterns = pd.concat([self.current_patterns, self.all_patterns])
+
+    # def find_exact_patterns(pattern):
+    #     '''
+    #     finds the hpatterns that are exact to the given hpattern
+    #     look by base patterns, as they don't have the variable/value
+    #     :param pattern: a pattern object
+    #     :return:
+    #     '''
+    #     exact_pattern_ids = []
+    #     if base_pattern in list(current_patterns['base_pattern']):
+    #         exact_pattern_ids.append(
+    #             list(current_patterns[current_patterns['base_pattern'] == base_pattern]['pattern_id'])[0])
+    #     return exact_pattern_ids
+
+    def save_all_patterns(self):
+        """
+        for testing
+        :return:
+        """
+        with open("all_patterns.pkl", "wb") as f:
+            dill.dump(self.all_patterns, f)
+
+
+    def matcher_bo_entity(self, entity_name):
+        '''
+        When a new entity is processed, this function checks whether the entity has already
+        been learned.
+        If the entity name is already present in the learned_patterns, the base_patterns that have been learned
+        for the entity are fetched. For instance, suppose we are processing the entity "Max Pressure" on a new
+        document, and we have learned the pattern "max press @ num" from previous docs. We then check if this
+        pattern exists in the current doc. If it does, retrieve the pattern. If the exact pattern does not exist
+        in the current document, the function will find the closest pattern in the current document. For instance,
+        perhaps instead of "max press @ num" the new document has "max pressure: num psi".
+
+
+        Currently seed_aliases is add manually by the developer and is a comma separated string
+        :param entity_name: string. The entity name to check if it has already been learned
+        :return:
+        '''
+        pre_learned_patterns = []
+        pre_learned_masks = []
+        seed_aliases = []
+        exact_pattern_ids = []
+        exact_masks = {}
+        close_pattern_ids = []
+        far_pattern_ids = []
+
+        print(self.learned_patterns['entity_name'])
+        print(self.learned_patterns[self.learned_patterns['entity_name'] == 'Max Pressure']['seed_aliases'])
+
+        # check if the any patterns for the entity have already been learned
+        if entity_name in self.learned_patterns.keys():
+            seed_aliases = self.learned_patterns[entity_name]["seed_aliases"]
+            print(seed_aliases)
+            seed_aliases = seed_aliases.split(',')
+            pattern_ids = str(list(self.learned_patterns[self.learned_patterns['entity_name'] == entity_name]['pattern_ids'])[0])
+            #check that there is a pattern id
+            if pattern_ids != '':
+                pattern_ids = ast.literal_eval(pattern_ids)
+                for pattern_id in pattern_ids:
+                    # get the pattern using the id
+                    #TODO rewrite so that we find exact matches based on pattern id
+                    # pre_learned_patterns.append(
+                    #     str(list(self.all_patterns[self.all_patterns['pattern_id'] == pattern_id]['hpattern'])[0]))
+                    pre_learned_mask = str(list(self.all_patterns[self.all_patterns['pattern_id'] == pattern_id]['mask'])[0])
+                    # if pre_learned_mask != '':
+                    #     pre_learned_masks.append(ast.literal_eval(pre_learned_mask))
+                    # else:
+                    #     pre_learned_masks.append([])
+                    print(
+                        'We have seen this entity before! Let us see if we can find an exact match in this document...')
+                    for hpattern, mask in zip(pre_learned_patterns, pre_learned_masks):
+                        # check if the exact pattern is present in the current patterns
+
+                        #problem: we need to match the learned pattern's hpattern with the hpattern in the current document.
+                        #idea: we can only do this by id if we know that each hpattern is unique.
+                        exact_hpatterns_found = self.find_exact_patterns(pattern_id)
+
+
+
+        # # check if the learned pattern is an exact match to the patterns in the current document
+        # if len(pre_learned_patterns) != 0:
+        #     print('We have seen this entity before! Let us see if we can find an exact match in this document...')
+        #     for hpattern, mask in zip(pre_learned_patterns, pre_learned_masks):
+        #         # check if the exact pattern is present in the current patterns
+        #         exact_hpatterns_found = self.find_exact_patterns(hpattern)
+        #         exact_pattern_ids.extend(exact_hpatterns_found)
+        #         for pattern_id in exact_hpatterns_found:
+        #             exact_masks[pattern_id] = mask
+        #
+        #     if len(exact_pattern_ids) > 0:
+        #         print('looks like the entity is present in the same form! Great!')
+        #
+        #     else:
+        #         print('finding patterns closer to learned patterns ...')
+        #         for hpattern in pre_learned_patterns:
+        #             # find the closest patterns
+        #             close_pattern_ids.extend(self.find_close_patterns(hpattern))
+        #
+        # else:
+        #     # find the patterns that have similar entity name
+        #     print(
+        #         'looks like nothing is close enough is there! Let us just find the closest seeming entity by the name!')
+        #     far_pattern_ids.extend(find_far_patterns(entity_name, aliases=seed_aliases))
+        #
+        # return exact_pattern_ids, close_pattern_ids, far_pattern_ids, exact_masks

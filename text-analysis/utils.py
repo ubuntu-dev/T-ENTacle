@@ -2,6 +2,7 @@ import PyPDF2
 import os
 import shutil
 from tika import parser
+import dill
 
 def split_pdf_pages(input_pdf_path, target_dir, fname_fmt=u"{num_page:04d}.pdf"):
 
@@ -68,3 +69,12 @@ def parse_document(file_path):
         parsed_text.append(pdftext)
 
     return parsed_text
+
+def load(filename):
+    """
+    Loads a dilled/pickled file
+    :param filename: string
+    :return: the loaded object
+    """
+    with open(filename, 'rb') as f:
+        return dill.load(f)

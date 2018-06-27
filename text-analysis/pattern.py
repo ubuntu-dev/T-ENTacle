@@ -27,7 +27,7 @@ class Pattern(object):
     # could be made more robust by taking the list of units from grobid. This is certainly not comprehensive
     units = ['ft', 'gal', 'ppa', 'psi', 'lbs', 'lb', 'bpm', 'bbls', 'bbl', '\'', "\"", "'", "°", "$", 'hrs']
 
-    def __init__(self, tokens, page_num, doc_name):
+    def __init__(self, tokens, page_num, doc_name, id):
         self.instance = tokens
         self.page_num = page_num
         self.hpattern = self._create_hpattern(self.instance)
@@ -35,6 +35,8 @@ class Pattern(object):
         self.instances = [tokens]
         self.page_nums = [page_num]
         self.doc_name = doc_name
+        self.id = id
+        self.location = {doc_name: {"page_num": [page_num], "instances": [tokens]}} #this could eventually be some sort of character position for grouping
 
     def is_date(self, token):
         if re.search(r"\\\d{1,2}\\\d{1,2}\\\d{2,4}", token):
@@ -99,7 +101,31 @@ class Pattern(object):
             return tuple(base_pattern)
 
     def add_instance(self, new_instance):
-        self.instances.append(new_instance)
+        """
+        Adds another instance of the pattern
+        :param new_instance: tuple of strings or list of tuples of strings
+        :return:
+        """
+        if isinstance(new_instance, tuple):
+            self.instances.append(new_instance)
+        elif isinstance(new_instance, list):
+            self.instances.extend(new_instance)
+        else:
+            error_message = 'Expected a string or list but got type ' + str(type(new_instance))
+            raise TypeError(error_message)
+
+    def add(self, location_dict):
+        """
+        Adds more findings of the pattern
+        :param location_dict: nested dictionary of form {"doc_name" : {"page_num" :[], "instances": []}}
+        :return:
+        """
+        for key in location_dict.keys():
+            if key in self.location:
+                self.location[key]["page_num"].extend(location_dict[key]["page_num"])
+                self.location[key]["instances"].extend(location_dict[key]["instances"])
+            else:
+                self.location[key] = location_dict[key]
 
     def add_page_num(self, new_page_num):
         self.page_nums.append(new_page_num)

@@ -33,6 +33,7 @@ class KE_Interface:
             self.all_patterns = pd.DataFrame(
                 columns=['pattern_id', 'base_pattern', 'instances', 'hpattern', 'document_name', 'num_instances',
                          'mask', 'page_numbers'])
+        self.all_patterns.index.name = 'pattern_id'
 
     def interact_for_single_entity(entity_name, knowledge_extractor, strict=False, auto_skip=False):
         '''
@@ -47,6 +48,7 @@ class KE_Interface:
         :return:
         '''
 
+        #initialize a space to save the correctly identified patterns
         result_rows = pd.DataFrame(columns=['instances', 'pattern_ids', 'hpattern'])
         exact_pattern_ids, close_pattern_ids, far_pattern_ids, exact_masks = knowledge_extractor.matcher_bo_entity(entity_name)
 
