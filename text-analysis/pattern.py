@@ -28,6 +28,7 @@ class Pattern(object):
     units = ['ft', 'gal', 'ppa', 'psi', 'lbs', 'lb', 'bpm', 'bbls', 'bbl', '\'', "\"", "'", "°", "$", 'hrs']
 
     def __init__(self, tokens, page_num, doc_name, id):
+        print(tokens)
         self.instance = tokens
         self.page_num = page_num
         self.hpattern = self._create_hpattern(self.instance)
@@ -37,6 +38,15 @@ class Pattern(object):
         self.doc_name = doc_name
         self.id = id
         self.location = {doc_name: {"page_num": [page_num], "instances": [tokens]}} #this could eventually be some sort of character position for grouping
+        self.mask =[]
+
+    def set_mask(self, mask):
+        """
+        The parts of the pattern the user chose
+        :param mask: List of indices
+        :return:
+        """
+        self.mask = mask
 
     def is_date(self, token):
         if re.search(r"\\\d{1,2}\\\d{1,2}\\\d{2,4}", token):
@@ -126,9 +136,49 @@ class Pattern(object):
                 self.location[key]["instances"].extend(location_dict[key]["instances"])
             else:
                 self.location[key] = location_dict[key]
+            self.page_nums.extend(location_dict[key]["instances"])
+            self.instances.extend(location_dict[key]["instances"])
 
     def add_page_num(self, new_page_num):
         self.page_nums.append(new_page_num)
+
+    def find_entities(self):
+        """
+        Aggregates the part of the hpattern that are words to find the entire entity
+        :return:
+        """
+        entity = ""
+        entities = []
+        for token in [self.hpattern[i] for i in self.mask]:
+            if token[2] == self.WORD and len(token) < 4: #don't include units in the entity name
+                entity += token[0] + " "
+            else:
+                if entity != "":
+                    entities.append(entity.strip())
+                    entity = ""
+        return entities
+
+    def find_units(self):
+        """
+        Return the unit portion of the pattern
+        :return: units, list of strings representing a unit
+        """
+        units = []
+        for token in [self.hpattern[i] for i in self.mask]:
+            if len(token) >= 4 and token[3] == self.UNIT:
+                units.append(token[0])
+        return units
+
+    def find_values(self):
+        """
+        Return the numerical part(s) of the pattern
+        :return: values, list of strings representing numbers
+        """
+        values = []
+        for token in [self.hpattern[i] for i in self.mask]:
+            if token[3] == self.DIGI:
+                values.append(token[0])
+        return values
 
     def get_string(self):
         """

@@ -224,21 +224,6 @@ class KnowledgeExtractor(object):
                 values.append(token_inst)
         return values
 
-    def find_exact_patterns(self, hpattern):
-        '''
-        finds the hpatterns that are exact to the given hpattern
-        look by base patterns, as they don't have the variable/value
-        :param hpattern:
-        :return:
-        '''
-        global current_patterns
-        exact_pattern_ids = []
-        base_pattern = str(self.get_base_pattern(ast.literal_eval(hpattern)))
-        if base_pattern in list(current_patterns['base_pattern']):
-            exact_pattern_ids.append(
-                list(current_patterns[current_patterns['base_pattern'] == base_pattern]['pattern_id'])[0])
-        return exact_pattern_ids
-
     def find_close_patterns(self, hpattern):
         '''
         finds the hpatterns that are closest to the given hpattern
@@ -248,7 +233,6 @@ class KnowledgeExtractor(object):
         global current_patterns
         close_pattern_ids = []
 
-        #WHY IS ASITANG USING THIS?
         hpattern = ast.literal_eval(hpattern)
         entities = self.find_entities(hpattern)
         units = self.find_units(hpattern)
@@ -521,19 +505,6 @@ class KnowledgeExtractor(object):
         self.add_curr_to_all_patterns()
         #self.all_patterns = pd.concat([self.current_patterns, self.all_patterns])
 
-    # def find_exact_patterns(pattern):
-    #     '''
-    #     finds the hpatterns that are exact to the given hpattern
-    #     look by base patterns, as they don't have the variable/value
-    #     :param pattern: a pattern object
-    #     :return:
-    #     '''
-    #     exact_pattern_ids = []
-    #     if base_pattern in list(current_patterns['base_pattern']):
-    #         exact_pattern_ids.append(
-    #             list(current_patterns[current_patterns['base_pattern'] == base_pattern]['pattern_id'])[0])
-    #     return exact_pattern_ids
-
     def save_all_patterns(self):
         """
         for testing
@@ -542,6 +513,16 @@ class KnowledgeExtractor(object):
         with open("all_patterns.pkl", "wb") as f:
             dill.dump(self.all_patterns, f)
 
+    def find_exact_patterns(self, base_pattern):
+        '''
+        Checks if there are patterns in the current document that match base_pattern, a previously learned pattern.
+        look by base patterns, as they don't have the variable/value
+        :param base_pattern: a pattern object
+        :return:
+        '''
+        if base_pattern in self.curr_patterns.keys():
+            return self.curr_patterns[base_pattern]
+        else: return None
 
     def matcher_bo_entity(self, entity_name):
         '''
@@ -562,43 +543,63 @@ class KnowledgeExtractor(object):
         pre_learned_patterns = []
         pre_learned_masks = []
         seed_aliases = []
-        exact_pattern_ids = []
-        exact_masks = {}
-        close_pattern_ids = []
-        far_pattern_ids = []
+        exact_patterns_all = []
+        close_patterns_all   = []
 
-        print(self.learned_patterns['entity_name'])
-        print(self.learned_patterns[self.learned_patterns['entity_name'] == 'Max Pressure']['seed_aliases'])
-
+        print(self.learned_patterns.keys())
         # check if the any patterns for the entity have already been learned
         if entity_name in self.learned_patterns.keys():
             seed_aliases = self.learned_patterns[entity_name]["seed_aliases"]
             print(seed_aliases)
-            seed_aliases = seed_aliases.split(',')
-            pattern_ids = str(list(self.learned_patterns[self.learned_patterns['entity_name'] == entity_name]['pattern_ids'])[0])
-            #check that there is a pattern id
-            if pattern_ids != '':
-                pattern_ids = ast.literal_eval(pattern_ids)
-                for pattern_id in pattern_ids:
-                    # get the pattern using the id
-                    #TODO rewrite so that we find exact matches based on pattern id
-                    # pre_learned_patterns.append(
-                    #     str(list(self.all_patterns[self.all_patterns['pattern_id'] == pattern_id]['hpattern'])[0]))
-                    pre_learned_mask = str(list(self.all_patterns[self.all_patterns['pattern_id'] == pattern_id]['mask'])[0])
-                    # if pre_learned_mask != '':
-                    #     pre_learned_masks.append(ast.literal_eval(pre_learned_mask))
-                    # else:
-                    #     pre_learned_masks.append([])
-                    print(
-                        'We have seen this entity before! Let us see if we can find an exact match in this document...')
-                    for hpattern, mask in zip(pre_learned_patterns, pre_learned_masks):
-                        # check if the exact pattern is present in the current patterns
-
-                        #problem: we need to match the learned pattern's hpattern with the hpattern in the current document.
-                        #idea: we can only do this by id if we know that each hpattern is unique.
-                        exact_hpatterns_found = self.find_exact_patterns(pattern_id)
+            #get all the base_patterns we have already learned for the entity
+            pre_learned_bpattern = self.learned_patterns[entity_name]["base_patterns"]
+            if pre_learned_bpattern:
+                # TODO set masks in the pattern object
+                print('We have seen this entity before! Let us see if we can find an exact match in this document...')
+                #check if we can find an exact match in the current document
+                exact_patterns = list(map(self.find_exact_patterns, pre_learned_bpattern))
+                #filter any that returned None
+                exact_patterns = [p for p in exact_patterns if p]
+                if exact_patterns:
+                    print('looks like the entity is present in the same form! Great!')
+                    for p in exact_patterns:
+                        print(p.base_pattern)
+                    exact_patterns_all.extend(list(exact_patterns))
+                else:
+                    print('finding patterns in this document close to the learned patterns ...')
+                    #TODO rewrite find_close_patterns
+                    return
+                    self.find_close_patterns()
 
 
+
+
+
+
+            # pattern_ids = str(list(self.learned_patterns[self.learned_patterns['entity_name'] == entity_name]['pattern_ids'])[0])
+            # #check that there is a pattern id
+            # if pattern_ids != '':
+            #     pattern_ids = ast.literal_eval(pattern_ids)
+            #     for pattern_id in pattern_ids:
+            #         # get the pattern using the id
+            #         #TODO rewrite so that we find exact matches based on pattern id
+            #         # pre_learned_patterns.append(
+            #         #     str(list(self.all_patterns[self.all_patterns['pattern_id'] == pattern_id]['hpattern'])[0]))
+            #         pre_learned_mask = str(list(self.all_patterns[self.all_patterns['pattern_id'] == pattern_id]['mask'])[0])
+            #         # if pre_learned_mask != '':
+            #         #     pre_learned_masks.append(ast.literal_eval(pre_learned_mask))
+            #         # else:
+            #         #     pre_learned_masks.append([])
+            #         print(
+            #             'We have seen this entity before! Let us see if we can find an exact match in this document...')
+            #         for hpattern, mask in zip(pre_learned_patterns, pre_learned_masks):
+            #             # check if the exact pattern is present in the current patterns
+            #
+            #             #problem: we need to match the learned pattern's hpattern with the hpattern in the current document.
+            #             #idea: we can only do this by id if we know that each hpattern is unique.
+            #             exact_hpatterns_found = self.find_exact_patterns(pattern_id)
+            #
+            #
 
         # # check if the learned pattern is an exact match to the patterns in the current document
         # if len(pre_learned_patterns) != 0:
