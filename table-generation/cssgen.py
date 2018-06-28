@@ -4,6 +4,14 @@ import itertools
 import json
 
 def build_json(index, lth, lty, lclr):
+    """
+    Builds a label JSON file that contains all information on the parameters
+    :param index the index of the table
+    :lth line thickness
+    :lty line type
+    :lclr line colour
+    :return the JSON data
+    """
     data = {}
     data[str(index)] = []
     data[str(index)].append({
@@ -14,8 +22,9 @@ def build_json(index, lth, lty, lclr):
     return data
 
 def main():
-    # Could read this from files
-    #
+    """
+    Performs CSS and JSON generation
+    """
     line_type = ['dotted', 'solid']
     line_color = ['blue', 'red', 'black', 'cyan']
     line_thickness = ['1px', '2px', '3px']

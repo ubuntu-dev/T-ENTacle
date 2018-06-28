@@ -24,16 +24,31 @@ images = ("thumb1.jpg", "thumb2.jpg", "more.jpg", "more2.jpg")
 start = time.time()
 
 def table_to_pdf(name):
+    """
+    Converts an HTML table to a PDF file
+    :param name file name
+    """
     pdfkit.from_file('./HTML/' + name + ".html", './PDF/' + name + ".pdf")
 
+
 def pdf_to_png(name):
+    """
+    Converts the PDF of a table to a PNG image
+    :param name file name
+    """
     size = 7016, 4961
     with Image(filename='./PDF/' + name + '.pdf') as img:
-        #print('pages = ', len(img.sequence))
         with img.convert('png') as converted:
             converted.save(filename='./PNG/' + name+ '.png')
 
+
 def pdf_to_jpg(filepdf, name):
+    """
+    Converts the PDF of a table to a JPG image
+    :filepdf the PDF file
+    :param name file name
+    :return the bounding box of the table in the JPG
+    """
     uuids = str(uuid.uuid4().fields[-1])[:5]
     with Image(filename=filepdf, resolution=500) as img:
         img.compression_quality = 80
@@ -50,9 +65,14 @@ def pdf_to_jpg(filepdf, name):
         for i in list_im:
             os.remove(i)
     return bounding_box(path)
-    #return path
+
 
 def bounding_box(image_file):
+    """
+    Detects the bounding box of a table in an image using Open CV
+    and reports its coordinates
+    :param image_file the image to be analysed
+    """
     im = cv2.imread(image_file)
     im[im == 255] = 1
     im[im == 0] = 255
@@ -73,9 +93,13 @@ def bounding_box(image_file):
     box = cv2.boxPoints(rect)
 
     return out
-    #print(box)
+
 
 def write_to_csv(data_arr):
+    """
+    Writes the bounding box data to a CSV file
+    :param data_arr the data to be written to a CSV
+    """
     f = open('bounding_boxes.csv','w')
     for i in range(len(data_arr)):
         temp = data_arr[i]
