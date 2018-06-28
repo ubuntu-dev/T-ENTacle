@@ -9,6 +9,9 @@ from nltk.chunk import conlltags2tree, tree2conlltags
 from nltk.tag import StanfordNERTagger
 
 def parse_pdf():
+	"""
+	Reads all PDF files and generates an XML files for each using Tika
+	"""
 	i = 0
 	for x in os.listdir("./PDF/"):
 		if './PDF/' + str(x) == '.DS_Store':
@@ -22,6 +25,11 @@ def parse_pdf():
 			output.write(parsed["content"])
 
 def remove_names(sentence):
+	"""
+	Removes NNPs (proper nouns) from a sentence
+	:param sentence the sentence to be modified
+    :return the de-identified/modified sentence
+	"""
 	new_sent = sentence
 	for w in sentence.split():
 		if '/' in w:
@@ -37,6 +45,10 @@ def remove_names(sentence):
 
 
 def parse_xml():
+	"""
+	Reads the XML files, cleans them up appropriately to de-identify them, 
+	and outputs the results as plain text in a separate directory
+	"""
 	for x in os.listdir("./XML/"):
 		if str(x) == '.DS_Store':
 			print("SKIP")
