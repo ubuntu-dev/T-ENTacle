@@ -160,119 +160,6 @@ class KnowledgeExtractor(object):
     #     return stringbreak
 
 
-    def find_entities(self, hpattern, mask=[]):
-        '''
-        aggrerate the words that are next to each other as an entity. Find multiple ones.
-        :param hpattern:
-        :return:
-        '''
-
-        if len(mask) == 0:
-            mask = list(np.full(len(hpattern), True))
-
-        entities = []
-        entity = ''
-        dummied_hpatteren = list(hpattern)
-        dummied_hpatteren.append(('~', '~', '~'))
-        dummied_hpatteren = tuple(dummied_hpatteren)
-        mask.append(True)
-
-        for token, select in zip(dummied_hpatteren, mask):
-            if not select:
-                continue
-            if token[2] == self.WORD:
-                entity += ' ' + token[0]
-            else:
-                if entity != '':
-                    entities.append(entity)
-                entity = ''
-        return entities
-
-    def find_units(self, hpattern, mask=[]):
-        '''
-        find the units in the pattern
-        :param hpattern:
-        :return:
-        '''
-
-        if len(mask) == 0:
-            mask = list(np.full(len(hpattern), True))
-
-        units = []
-        for token, select in zip(hpattern, mask):
-            if not select:
-                continue
-            if len(token) >= 4 and token[3] == self.UNIT:
-                units.append(token[0])
-        return units
-
-    def find_values(self, instance, hpattern, mask=[]):
-        '''
-        find the values in the pattern
-        :param hpattern:
-        :return:
-        '''
-
-        values = []
-        if len(mask) == 0:
-            mask = list(np.full(len(hpattern), True))
-
-        for token_inst, token_patt, select in zip(instance, hpattern, mask):
-            if not select:
-                continue
-            if token_patt[2] == self.DIGI:
-                values.append(token_inst)
-        return values
-
-    def find_close_patterns(self, hpattern):
-        '''
-        finds the hpatterns that are closest to the given hpattern
-        :param hpattern:
-        :return:
-        '''
-        global current_patterns
-        close_pattern_ids = []
-
-        hpattern = ast.literal_eval(hpattern)
-        entities = self.find_entities(hpattern)
-        units = self.find_units(hpattern)
-
-        close_patterns = []
-
-        for _, row in current_patterns.iterrows():
-            confidence_flag_entity = 0
-            confidence_flag_unit = 0
-            confidence = 0  # todo: give the best score here; will help decide the rank
-            hpattern_iter = ast.literal_eval(str(row['hpattern']))
-            mask = str(row['mask'])
-            if mask == '':
-                mask = []
-            else:
-                mask = ast.literal_eval(str(row['mask']))
-            entities_iter = self.find_entities(hpattern_iter, mask)
-            units_iter = self.find_units(hpattern_iter, mask)
-
-            for entity_iter in entities_iter:
-                for entity in entities:
-                    if fuzz.ratio(entity, entity_iter) > 70:
-                        confidence_flag_entity = 1
-
-            for unit_iter in units_iter:
-                for unit in units:
-                    if unit.lower() == unit_iter.lower():
-                        confidence_flag_unit = 1
-
-            if confidence_flag_entity == 1 or confidence_flag_unit == 1:
-                close_patterns.append((row['pattern_id'], confidence_flag_entity, confidence_flag_unit))
-
-        # todo: here rank the patterns according to confidence and return the top n
-
-        for conf in close_patterns:
-            close_pattern_ids.append(conf[0])
-
-        return close_pattern_ids
-
-
     def prune(self, patterns):
         """
         In all of the found patterns, we want to prune away some patterns that are subsets of each other, keeping the
@@ -524,6 +411,59 @@ class KnowledgeExtractor(object):
             return self.curr_patterns[base_pattern]
         else: return None
 
+    def find_close_patterns(self, base_pattern):
+        '''
+        Finds the hpattern in current_patterns that is closest to the hpattern that corresponds to the base_pattern.
+        This is done by calculating the levenshtein distance between the entity name of the previously learned pattern
+        and the entity name of all the patterns in current patterns. We also look for similar units. An overall
+        confidence score of "closeness" is then calculated as the sum of close entity name parts and similar unit. So,
+        a pattern in curr_patterns will have a higher confidence score if it is close to more than one entity previously
+        learned than only one. The score is boosted by matching units, and the score is boosted if a multi-part entity
+        name matches more than one part of a previously learned multi-part entity.
+        :param pattern: pattern object
+        :return:
+        '''
+        print("Trying to find a pattern close to ")
+        print(base_pattern)
+        #get the pattern_object corresponding to the base pattern
+        pattern = self.all_patterns[base_pattern]
+        hpattern = ast.literal_eval(str(pattern.hpattern))
+        entities = pattern.find_entities()
+        units = pattern.find_units()
+
+        close_patterns = {}
+
+        for k, p in self.curr_patterns.items():
+            confidence_flag_entity = 0 #is the entity close?
+            confidence_flag_unit = 0    #is the unit close?
+            confidence = 0  # todo: give the best score here; will help decide the rank
+            p_hpattern = ast.literal_eval(str(p.hpattern))
+            p_entities = p.find_entities()
+            p_units = p.find_units()
+
+            #score entity confidence by how many of the entity groups are close
+            for p_ent in p_entities:
+                for ent in entities:
+                    print("Checking the entity " + p_ent + " against the learned entity " + ent)
+                    print(fuzz.ratio(p_ent, ent))
+                    if fuzz.ratio(p_ent, ent) > 70:
+                        confidence_flag_entity += 1  # !Note: this is changed from the original code from a binary to a count. TODO: discuss with Asitang
+
+            for p_unit in p_units:
+                for u in units:
+                    print("Checking the unit " + p_unit + " against the learned unit " + u)
+                    if p_unit.lower() == u.lower(): #TODO make this more robust by using the GROBID json. Multiple representations can mean the same thing, like m and meter
+                        confidence_flag_unit += 1
+
+                # ?? TODO Should we compare values too?
+            confidence = confidence_flag_unit + confidence_flag_entity
+            if confidence >= 1:
+                if p not in close_patterns:
+                    close_patterns[p] = 0
+                close_patterns[p] += confidence
+
+        return close_patterns
+
     def matcher_bo_entity(self, entity_name):
         '''
         When a new entity is processed, this function checks whether the entity has already
@@ -540,36 +480,48 @@ class KnowledgeExtractor(object):
         :param entity_name: string. The entity name to check if it has already been learned
         :return:
         '''
-        pre_learned_patterns = []
-        pre_learned_masks = []
         seed_aliases = []
-        exact_patterns_all = []
-        close_patterns_all   = []
+        exact_patterns = []
+        close_patterns = []
 
-        print(self.learned_patterns.keys())
         # check if the any patterns for the entity have already been learned
+        # TODO should we check in the seed aliases too?
         if entity_name in self.learned_patterns.keys():
             seed_aliases = self.learned_patterns[entity_name]["seed_aliases"]
-            print(seed_aliases)
             #get all the base_patterns we have already learned for the entity
-            pre_learned_bpattern = self.learned_patterns[entity_name]["base_patterns"]
-            if pre_learned_bpattern:
+            pre_learned_bpatterns = self.learned_patterns[entity_name]["base_patterns"]
+            if pre_learned_bpatterns:
                 # TODO set masks in the pattern object
                 print('We have seen this entity before! Let us see if we can find an exact match in this document...')
                 #check if we can find an exact match in the current document
-                exact_patterns = list(map(self.find_exact_patterns, pre_learned_bpattern))
+                exact_patterns = list(map(self.find_exact_patterns, pre_learned_bpatterns))
                 #filter any that returned None
                 exact_patterns = [p for p in exact_patterns if p]
                 if exact_patterns:
                     print('looks like the entity is present in the same form! Great!')
-                    for p in exact_patterns:
-                        print(p.base_pattern)
-                    exact_patterns_all.extend(list(exact_patterns))
                 else:
+                    #TODO: what if there is an exact match and a close match? Could there be more than one representation?
                     print('finding patterns in this document close to the learned patterns ...')
-                    #TODO rewrite find_close_patterns
-                    return
-                    self.find_close_patterns()
+                    close_patterns = list(map(self.find_close_patterns, pre_learned_bpatterns))
+                    #close_patterns is a list of dictionaries. Key pattern, value confidence.
+                    print(close_patterns)
+                    #  First aggregate keys into one big dictionary
+                    close_p = {}
+                    for d in close_patterns:
+                        for p, c in d.items():
+                            if p not in close_p:
+                                close_p[p] = 0
+                            close_p[p] += c
+                    # sort
+                    close_p = sorted(close_p.items(), key=lambda x: x[1], reverse=True)
+                    close_p = [tup[0] for tup in close_p]
+
+                    #flatten list and remove duplicate items
+                    #close_patterns = list(set([value for sublist in close_patterns for value in sublist]))
+
+        #TODO check for far patterns
+        return exact_patterns, close_p
+
 
 
 

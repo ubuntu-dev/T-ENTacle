@@ -38,7 +38,7 @@ class Pattern(object):
         self.doc_name = doc_name
         self.id = id
         self.location = {doc_name: {"page_num": [page_num], "instances": [tokens]}} #this could eventually be some sort of character position for grouping
-        self.mask =[]
+        self.mask = range(len(tokens))
 
     def set_mask(self, mask):
         """
