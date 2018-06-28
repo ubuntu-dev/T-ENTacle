@@ -416,14 +416,14 @@ class KnowledgeExtractor(object):
     def find_close_patterns(self, base_pattern):
         '''
         Finds the hpattern in current_patterns that is closest to the hpattern that corresponds to the base_pattern.
-        This is done by calculating the levenshtein distance between the entity name of the previously learned pattern
+        This is done by calculating the fuzzy distance between the entity name of the previously learned pattern
         and the entity name of all the patterns in current patterns. We also look for similar units. An overall
         confidence score of "closeness" is then calculated as the sum of close entity name parts and similar unit. So,
         a pattern in curr_patterns will have a higher confidence score if it is close to more than one entity previously
         learned than only one. The score is boosted by matching units, and the score is boosted if a multi-part entity
         name matches more than one part of a previously learned multi-part entity.
         :param pattern: pattern object
-        :return close_patterns: dict, {pattern object: confidence score}. 
+        :return close_patterns: dict, {pattern object: confidence score}.
         '''
         print("Trying to find a pattern close to ")
         print(base_pattern)
@@ -471,6 +471,24 @@ class KnowledgeExtractor(object):
 
         return close_patterns
 
+    def find_far_patterns(self, entity_name, aliases = []):
+        """
+
+        :param entity_name: string. The entity we want to find in the current document
+        :param aliases: list of strings, Contains alternate representations of the desired entity
+        :return:
+        """
+        aliases.append(entity_name)
+        far_patterns = []
+        for k, p in self.curr_patterns.items():
+            entities = p.find_entities()
+            for entity in entities:
+                for alias in aliases:
+                    if fuzz.ratio(alias.lower(), entity) > 50:
+                        far_patterns.append(p)
+        return far_patterns
+
+
     def matcher_bo_entity(self, entity_name):
         '''
         When a new entity is processed, this function checks whether the entity has already
@@ -490,6 +508,7 @@ class KnowledgeExtractor(object):
         seed_aliases = []
         exact_patterns = []
         close_patterns = []
+        far_patterns = []
 
         # check if the any patterns for the entity have already been learned
         # TODO should we check in the seed aliases too?
@@ -510,31 +529,23 @@ class KnowledgeExtractor(object):
                     #look for patterns in the current document that are similar to the previously learned patterns
                     #TODO: what if there is an exact match and a close match? Could there be more than one representation?
                     print('finding patterns in this document close to the learned patterns ...')
-                    close_patterns = list(map(self.find_close_patterns, pre_learned_bpatterns))
+                    close_pats = list(map(self.find_close_patterns, pre_learned_bpatterns))
                     #close_patterns is a list of dictionaries. Key pattern, value confidence.
-                    print(close_patterns)
                     #  First aggregate keys into one big dictionary
                     close_p = {}
-                    for d in close_patterns:
+                    for d in close_pats:
                         for p, c in d.items():
                             if p not in close_p:
                                 close_p[p] = 0
                             close_p[p] += c
                     # sort
                     close_p = sorted(close_p.items(), key=lambda x: x[1], reverse=True)
-                    close_p = [tup[0] for tup in close_p]
-
-                    #flatten list and remove duplicate items
-                    #close_patterns = list(set([value for sublist in close_patterns for value in sublist]))
-
-        #TODO check for far patterns
-        return exact_patterns, close_p
+                    close_patterns = [tup[0] for tup in close_p]
 
 
-        # else:
-        #     # find the patterns that have similar entity name
-        #     print(
-        #         'looks like nothing is close enough is there! Let us just find the closest seeming entity by the name!')
-        #     far_pattern_ids.extend(find_far_patterns(entity_name, aliases=seed_aliases))
-        #
-        # return exact_pattern_ids, close_pattern_ids, far_pattern_ids, exact_masks
+            #if we haven't learned anything about this entity, maybe there is a pattern similar
+            #to the entity name or its aliases
+            else:
+                far_patterns = self.find_far_patterns(entity_name, seed_aliases)
+
+        return exact_patterns, close_patterns, far_patterns
