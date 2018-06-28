@@ -28,6 +28,8 @@ keep dictionary of pattern objects, key is id
 1. consider making threshold mutable by the user
 2. currently filters out patterns that don't have numbers. Are there any strings that should be left in?
 3. add a way for user to add seed aliases
+4. Think about the flow of when patterns are added to allpatterns. This should probably occur after a user is finished processing
+    the current patterns.
 """
 class KnowledgeExtractor(object):
     PREP = "Prep~"
@@ -421,22 +423,26 @@ class KnowledgeExtractor(object):
         learned than only one. The score is boosted by matching units, and the score is boosted if a multi-part entity
         name matches more than one part of a previously learned multi-part entity.
         :param pattern: pattern object
-        :return:
+        :return close_patterns: dict, {pattern object: confidence score}. 
         '''
         print("Trying to find a pattern close to ")
         print(base_pattern)
-        #get the pattern_object corresponding to the base pattern
+        #get the pattern_object corresponding to the base pattern we want to match
         pattern = self.all_patterns[base_pattern]
         hpattern = ast.literal_eval(str(pattern.hpattern))
         entities = pattern.find_entities()
         units = pattern.find_units()
 
-        close_patterns = {}
+        close_patterns = {} #pattern_object: confidence score
 
+        #check if any of the patterns in the current document are close to hpattern
         for k, p in self.curr_patterns.items():
+            #set defaults
             confidence_flag_entity = 0 #is the entity close?
             confidence_flag_unit = 0    #is the unit close?
-            confidence = 0  # todo: give the best score here; will help decide the rank
+            confidence = 0
+
+            #get p's attributes
             p_hpattern = ast.literal_eval(str(p.hpattern))
             p_entities = p.find_entities()
             p_units = p.find_units()
@@ -449,11 +455,12 @@ class KnowledgeExtractor(object):
                     if fuzz.ratio(p_ent, ent) > 70:
                         confidence_flag_entity += 1  # !Note: this is changed from the original code from a binary to a count. TODO: discuss with Asitang
 
+            #score unit confidence by exact match
             for p_unit in p_units:
                 for u in units:
                     print("Checking the unit " + p_unit + " against the learned unit " + u)
                     if p_unit.lower() == u.lower(): #TODO make this more robust by using the GROBID json. Multiple representations can mean the same thing, like m and meter
-                        confidence_flag_unit += 1
+                        confidence_flag_unit += .5 #weight a unit match less heavily than an entity match. #TODO evaluate different weights
 
                 # ?? TODO Should we compare values too?
             confidence = confidence_flag_unit + confidence_flag_entity
@@ -500,6 +507,7 @@ class KnowledgeExtractor(object):
                 if exact_patterns:
                     print('looks like the entity is present in the same form! Great!')
                 else:
+                    #look for patterns in the current document that are similar to the previously learned patterns
                     #TODO: what if there is an exact match and a close match? Could there be more than one representation?
                     print('finding patterns in this document close to the learned patterns ...')
                     close_patterns = list(map(self.find_close_patterns, pre_learned_bpatterns))
@@ -523,55 +531,6 @@ class KnowledgeExtractor(object):
         return exact_patterns, close_p
 
 
-
-
-
-
-
-            # pattern_ids = str(list(self.learned_patterns[self.learned_patterns['entity_name'] == entity_name]['pattern_ids'])[0])
-            # #check that there is a pattern id
-            # if pattern_ids != '':
-            #     pattern_ids = ast.literal_eval(pattern_ids)
-            #     for pattern_id in pattern_ids:
-            #         # get the pattern using the id
-            #         #TODO rewrite so that we find exact matches based on pattern id
-            #         # pre_learned_patterns.append(
-            #         #     str(list(self.all_patterns[self.all_patterns['pattern_id'] == pattern_id]['hpattern'])[0]))
-            #         pre_learned_mask = str(list(self.all_patterns[self.all_patterns['pattern_id'] == pattern_id]['mask'])[0])
-            #         # if pre_learned_mask != '':
-            #         #     pre_learned_masks.append(ast.literal_eval(pre_learned_mask))
-            #         # else:
-            #         #     pre_learned_masks.append([])
-            #         print(
-            #             'We have seen this entity before! Let us see if we can find an exact match in this document...')
-            #         for hpattern, mask in zip(pre_learned_patterns, pre_learned_masks):
-            #             # check if the exact pattern is present in the current patterns
-            #
-            #             #problem: we need to match the learned pattern's hpattern with the hpattern in the current document.
-            #             #idea: we can only do this by id if we know that each hpattern is unique.
-            #             exact_hpatterns_found = self.find_exact_patterns(pattern_id)
-            #
-            #
-
-        # # check if the learned pattern is an exact match to the patterns in the current document
-        # if len(pre_learned_patterns) != 0:
-        #     print('We have seen this entity before! Let us see if we can find an exact match in this document...')
-        #     for hpattern, mask in zip(pre_learned_patterns, pre_learned_masks):
-        #         # check if the exact pattern is present in the current patterns
-        #         exact_hpatterns_found = self.find_exact_patterns(hpattern)
-        #         exact_pattern_ids.extend(exact_hpatterns_found)
-        #         for pattern_id in exact_hpatterns_found:
-        #             exact_masks[pattern_id] = mask
-        #
-        #     if len(exact_pattern_ids) > 0:
-        #         print('looks like the entity is present in the same form! Great!')
-        #
-        #     else:
-        #         print('finding patterns closer to learned patterns ...')
-        #         for hpattern in pre_learned_patterns:
-        #             # find the closest patterns
-        #             close_pattern_ids.extend(self.find_close_patterns(hpattern))
-        #
         # else:
         #     # find the patterns that have similar entity name
         #     print(
