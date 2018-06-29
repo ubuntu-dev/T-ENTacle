@@ -14,6 +14,7 @@ import dill
 import timeit
 import os
 import utils
+import locale
 
 """
 right now, works on one document at a time, but could move patterns dataframe to a class variable 
@@ -570,6 +571,18 @@ class KnowledgeExtractor(object):
                 far_patterns = self.find_far_patterns(entity_name, seed_aliases)
 
         return exact_patterns, close_patterns, far_patterns
+
+    def matcher_bo_num(self, entity_value):
+        """
+        Searches for all the patterns in current_pattern that have the particular value associated with them
+        :param entity_value: float
+        :return: 
+        """
+        found_patterns = []
+        for p in self.curr_patterns:
+            if entity_value in p.all_nums:
+                found_patterns.append(p)
+        return found_patterns
 
 
     def update_learned_patterns(self, entity_name, patterns):

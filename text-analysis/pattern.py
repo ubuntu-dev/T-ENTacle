@@ -2,6 +2,7 @@ import string
 import ast
 import re
 from itertools import chain
+import locale
 
 class Pattern(object):
     PREP = "Prep~"
@@ -26,6 +27,7 @@ class Pattern(object):
     punc = set(string.punctuation)
     # could be made more robust by taking the list of units from grobid. This is certainly not comprehensive
     units = ['ft', 'gal', 'ppa', 'psi', 'lbs', 'lb', 'bpm', 'bbls', 'bbl', '\'', "\"", "'", "°", "$", 'hrs']
+    locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
     def __init__(self, tokens, page_num, doc_name, id):
         print(tokens)
@@ -39,6 +41,7 @@ class Pattern(object):
         self.id = id
         self.location = {doc_name: {"page_num": [page_num], "instances": [tokens]}} #this could eventually be some sort of character position for grouping
         self.mask = range(len(tokens))
+        self.all_nums = self.convert_to_num(self.instances)
 
     def set_mask(self, mask):
         """
@@ -118,8 +121,12 @@ class Pattern(object):
         """
         if isinstance(new_instance, tuple):
             self.instances.append(new_instance)
+            self.all_nums.append(self.convert_to_num(new_instance))
+            self.all_nums.sort()
         elif isinstance(new_instance, list):
             self.instances.extend(new_instance)
+            self.all_nums.extend(self.convert_to_num(new_instance))
+            self.all_nums.sort()
         else:
             error_message = 'Expected a string or list but got type ' + str(type(new_instance))
             raise TypeError(error_message)
@@ -197,3 +204,21 @@ class Pattern(object):
         as_dict = {'instances': self.instances, 'page_numbers': self.page_nums, 'hpattern': self.hpattern,
                    'base_pattern': self.base_pattern, 'doc_name': self.doc_name}
         return as_dict
+
+    def convert_to_num(self, instances):
+        """
+        Stores the numeric part of an instance as an instance and keeps in sorted order
+        TODO: use a better data structure for sorting, like a linked list or ordered dict or tree!
+        :param instances:
+        :return:
+        """
+        as_num = []
+        if Pattern.DIGI in self.base_pattern:
+            indices = [i for i in range(len(self.base_pattern)) if self.base_pattern[i] == Pattern.DIGI]
+            for instance in instances:
+                for i in indices:
+                    as_num.append(locale.atof(instance[i]))
+        as_num.sort()
+        return as_num
+
+

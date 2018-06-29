@@ -7,35 +7,81 @@ import pandas as pd
 import numpy as np
 import click
 from KE_class import KnowledgeExtractor
+from pattern import Pattern
+import locale
 
 class KE_Interface:
     def __init__(self):
         #set object vars
         self.entity_seeds = [] #list of entities to look for
-        #set up a counter to save state across documents
-        if os.path.exists('counter'):
-            self.counter = self.loadmodel('counter')
-        else:
-            self.counter = 0
+        self.knowledge_extractor = KnowledgeExtractor()
 
-        # entity matchings for all the documents processed so far
-        if os.path.exists("learned_patterns.csv"):
-            self.learned_patterns = pd.read_csv('learned_patterns.csv', index_col=0) #I dropped the index on current patterns. Double check if I needed it for this to work.
-            self.learned_patterns.replace(np.nan, '', regex=True, inplace=True)
-        else:
-            self.learned_patterns = pd.DataFrame(columns=['entity_name', 'seed_aliases', 'pattern_ids'])
+    def get_user_selection(self, entity_name, patterns, knowledge_extractor, select_mask=True):
+        """
+        Allows the user to select the best matching patterns for the entity, entity_name. After selecting the patterns,
+        the user can also select to only keep part of the pattern.
+        :param entity_name: string, the entity_name to find patterns for
+        :param patterns: pattern object or list of pattern objects.
+        :param knowledge_extractor: KnowledgeExtractor object.
+        :param select_mask: bool. Allows the user to select only parts of the pattern (or not).
+        :return: None or string. A string is returned if the user elects to break out of this process.
+        """
+        #check for correct data type
+        if isinstance(patterns, Pattern):
+            patterns = [patterns]
 
-        # pattern information about all the patterns seen so far from all the documents processed
-        if os.path.exists('all_patterns.csv'):
-            self.all_patterns = pd.read_csv('all_patterns.csv', index_col=0)
-            self.all_patterns.replace(np.nan, '', regex=True, inplace=True)
-        else:
-            self.all_patterns = pd.DataFrame(
-                columns=['pattern_id', 'base_pattern', 'instances', 'hpattern', 'document_name', 'num_instances',
-                         'mask', 'page_numbers'])
-        self.all_patterns.index.name = 'pattern_id'
+        #create menu and print prompt for user
+        count = 0
+        menu = ""
+        for p in patterns:
+            menu = str(count) + ". " + p.instances[0] + "\n"
+            count += 1
 
-    def interact_for_single_entity(entity_name, knowledge_extractor, strict=False, auto_skip=False):
+        print("I found the following patterns that may represent " + entity_name + ".\n")
+        print(menu)
+        output = \
+        """Please enter the indices, separated by spaces, of all of the patterns you wish to select.
+        Or enter s to skip this entity or v to search by value."""
+        pattern_selection = input(output)
+        if pattern_selection in ['v', 'V', 's', 'S']:
+            return pattern_selection
+
+        patterns_to_keep = [patterns[i] for i in pattern_selection]
+
+        for p in patterns_to_keep:
+            if select_mask:
+            # for each pattern that the user selected, allow them to select the appropriate tokens (the mask).
+                valid_input = False
+                while not valid_input:
+                    mask_message = "Please enter, separated by spaces, the indices of the pattern " + p.instances[0] + \
+                                    " you wish to keep. Or enter a to keep all."
+                    print(mask_message)
+                    output = [str(i) + " " + p.instances[0][i] for i in range(len(p.instances[0]))]
+                    output = "\t".join(output)
+                    mask_selection = input(output)
+                    if mask_selection == "a" or mask_selection == "A":
+                        new_mask = list(range(len(p.instances[0])))
+                        p.set_mask(new_mask)
+                    else:
+                        try:
+                            new_mask = [int(i) for i in mask_selection]
+                            if len(new_mask) <= len(p.instances[0]):
+                                p.set_mask(new_mask)
+                                valid_input = True
+                            else:
+                                print("You entered too many indices. Please try again.")
+                        except ValueError:
+                            print("I didn't understand your input. Please try again.")
+
+            knowledge_extractor.update_learned_patterns(p)
+        return None
+
+    def get_value_from_user(self):
+        value_prompt = "Please enter the value you would like to search for. I will find a pattern that contains the value."
+        value = input(value_prompt)
+        return value
+
+    def interact_for_single_entity(self, entity_name, strict=False, auto_skip=False):
         '''
         TODO rewrite this entire function
         1. look for exact/similar entities
@@ -44,102 +90,51 @@ class KE_Interface:
         4. just skip that entity, put it in the report
         :param knowledge_extractor: KnowledgeExtractor object.
         :param entity_name: string.
-        :param strict: bool.
+        :param strict: bool. If True specifies that the user wants no interaction. Will only save exact pattern matches.
+        :param auto_skip: bool. Specifies partial supervision. If true, exact patterns will be saved without user feedback,
+                                but the program will prompt the user for feedback on similar pattern matches.
         :return:
         '''
+        #first check if we have already learned the entity or something similar to it
+        exact_patterns, close_patterns, far_patterns = self.knowledge_extractor.matcher_bo_entity(entity_name)
 
-        #initialize a space to save the correctly identified patterns
-        result_rows = pd.DataFrame(columns=['instances', 'pattern_ids', 'hpattern'])
-        exact_pattern_ids, close_pattern_ids, far_pattern_ids, exact_masks = knowledge_extractor.matcher_bo_entity(entity_name)
-
-        if len(exact_pattern_ids) != 0:
-            result_rows = get_rows_from_ids(exact_pattern_ids)
-        elif len(close_pattern_ids) != 0:
-            result_rows = get_rows_from_ids(close_pattern_ids)
-        elif len(far_pattern_ids) != 0:
-            result_rows = get_rows_from_ids(far_pattern_ids)
-        else:
-            print('Looks like there is nothing to be found here!')
-
+        #save the results if we have any, and poke the user if needed.
         if strict == True:
-            if len(exact_pattern_ids) == 0:
-                print('since no exact pattern found, and interactive is False. Skipping this entity.')
+            #do not interact with the user at all
+            if len(exact_patterns) == 0:
+                print('Since no exact pattern found, and interactive is False. Skipping this entity.')
                 return
             else:
-                for _, row in result_rows.iterrows():
-                    pattern_id = row['pattern_id']
-                    mask = exact_masks[pattern_id]
-                    update_learn_pattern(entity_name, pattern_id, mask)
+                #only add exact matches
+                self.knowledge_extractor.update_learned_patterns(entity_name, exact_patterns)
 
         else:
-            if auto_skip == True and len(exact_pattern_ids) != 0:
-                for _, row in result_rows.iterrows():
-                    pattern_id = row['pattern_id']
-                    mask = exact_masks[pattern_id]
-                    update_learn_pattern(entity_name, pattern_id, mask)
-                return
+            if auto_skip == True:
+                change_search = None
+                # don't bother the user for exact matches, just save
+                if len(exact_patterns) != 0:
+                    self.knowledge_extractor.update_learned_patterns(entity_name, exact_patterns)
+                #get user input if we found close or far matches
+                elif len(close_patterns) != 0:
+                    change_search = self.get_user_selection(entity_name, close_patterns, False)
+                elif len(far_patterns) != 0:
+                    change_search = self.get_user_selection(entity_name, far_patterns, False)
 
-            output = ''
-            count = 0
-            id_map = ['dummy']
-            for _, row in result_rows.iterrows():
-                count += 1
-                output += str(count) + '. ' + ' '.join(ast.literal_eval(str(row['instances']))[0]) + '\n'
-                id_map.append(row['pattern_id'])
-
-            output += 'ENTER s TO SKIP THIS ENTITY\n'
-            output += 'ENTER v search the patterns by Value\n'
-
-            print(
-                'Please, enter the index corresponding to the instance that best represents what you are looking for:')
-            selected_pattern_id = input(output)
-
-            if selected_pattern_id == 's':
-                return
-
-            if selected_pattern_id == 'v':
-                value = input('give the value for the entity: ' + entity_name)
-                exact_pattern_ids, instance_samples = matcher_bo_value(value)
-                output = ''
-                count = 0
-                id_map = ['dummy']
-                for pattern_id, instance in zip(exact_pattern_ids, instance_samples):
-                    count += 1
-                    output += str(count) + '. ' + ' '.join(instance) + '\n'
-                    id_map.append(pattern_id)
-
-                output += 'ENTER s TO SKIP THIS ENTITY\n'
-                if selected_pattern_id == 's':
+                #check if the user wants to skip this entity or search by value instead
+                if change_search == "s" or change_search == "S":
                     return
+                if change_search == "v" or change_search == "V":
+                    #TODO right now, only searches for nums, maybe we want to allow to search by date etc
+                    value = self.get_value_from_user()
+                    try:
+                        value_as_float = locale.atof(value)
+                        value_patterns = self.knowledge_extractor.matcher_bo_num(value_as_float)
+                        if value_patterns:
+                            self.get_user_selection(entity_name, value_patterns)
 
-                print(
-                    'Please, enter the index corresponding to the instance that best represents what you are looking for:')
-                selected_pattern_id = input(output)
-
-                selected_instance = instance_samples[int(selected_pattern_id) - 1]
-
-            selected_instance = ast.literal_eval(
-                str(list(result_rows[result_rows['pattern_id'] == id_map[int(selected_pattern_id)]]['instances'])[0]))[
-                0]
-
-            output = ''
-            count = 0
-            for token in selected_instance:
-                count += 1
-                output += str(count) + '. ' + token + '    '
-            print(
-                'Please, enter (seperated by spaces) all the indexes of the tokens that are relevant to the entity that you are looking for:')
-            selected_tokens = input(output)
-            selected_tokens = selected_tokens.strip().split(' ')
-            selected_tokens = list(map(int, selected_tokens))
-            mask = []
-            for token_id in range(1, len(selected_instance) + 1):
-                if token_id in selected_tokens:
-                    mask.append(True)
-                else:
-                    mask.append(False)
-
-            update_learn_pattern(entity_name, id_map[int(selected_pattern_id)], mask)
+                    except ValueError:
+                        #TODO better error handling
+                        print("Sorry, I didn't understand that input. ")
 
 
     def single_doc_cli(self, file_path, strict=False, auto_skip=False):
@@ -162,7 +157,7 @@ class KE_Interface:
         if len(self.entity_seeds)>0:
              for entity_name in self.entity_seeds:
                 print('Processing the entity: '+entity_name)
-                self.interact_for_single_entity(entity_name, ke, strict=strict, auto_skip=auto_skip)
+                self.interact_for_single_entity(entity_name, strict=strict, auto_skip=auto_skip)
              close()
         else:
             continue_cli = True
