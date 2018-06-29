@@ -36,7 +36,7 @@ def remove_names(sentence):
 			replacement = w.replace('/', ' ')
 			new_sent = new_sent.replace(w, replacement)
 	words = nltk.word_tokenize(new_sent)
-	tagged = nltk.pos_tag(words)
+	tagged = nltk.pos_tag(words) #[("peter", "NNP"), ("cooking", "VRB")]
 	for tuple_ in tagged:
 		if (tuple_[1] == 'NNP'):
 			name_repl = tuple_[0].replace(tuple_[0], '')

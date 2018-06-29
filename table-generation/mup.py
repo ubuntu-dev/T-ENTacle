@@ -16,6 +16,7 @@ import sys
 import mxnet as mx
 import cv2
 import csv
+import random
 
 items = ("Item one", "Item two", "Item three", "Item four")
 paras = ("This was a fantastic list.", "And now for something completely different.")
@@ -109,31 +110,59 @@ def write_to_csv(data_arr):
     f.close()
 
 
-bounding_boxes_ = []
-for x in os.listdir("./CSS"):
-    page = mp.page()
-    page.init(title="HTML Generator",
-              css=('../CSS/' + str(x)))
-    page.table()
+def read_words(words_file):
+    """
+    Reads a text file and puts its words into a list
+    :param words_file text file to be read
+    :return list of words read from a file
+    """
+    return [word for line in open(words_file, 'r') for word in line.split()]
 
-    for i in range(10):
-        page.tr()
-        for j in range(5):
-            page.td(j)
-            page.td.close()
-        page.tr.close()
 
-    page.table.close()
+def grouped(list_of_words, n):
+    return zip((*[iter(list_of_words)]*n))
 
-    file_ = os.path.splitext(x)[0]
-    filename = file_ + ".html"
-    fw = open("./HTML/" + filename, "w+")
-    fw.write(str(page))
-    fw.close()
 
-    bounding_boxes_.append(pdf_to_jpg('./PDF/' + file_ + '.pdf', file_))
+def generate_html():
+    bounding_boxes_ = []
+    for x in os.listdir("./CSS"):
+        page = mp.page()
+        page.init(title="HTML Generator",
+                  css=('../CSS/' + str(x)))
+        page.table()
 
-write_to_csv(bounding_boxes_)
+        list_of_words = read_words('../pdf-parser/text_for_tables.txt')
+
+        for i in range(10): #rows
+            page.tr()
+            for j in range(5): #columns
+                num = random.randint(1, 21)
+                temp = ''
+                for r in range(num):
+                    temp += random.choice(list_of_words) + ' '
+                page.td(temp)
+                page.td.close()
+            page.tr.close()
+
+        page.table.close()
+
+        file_ = os.path.splitext(x)[0]
+        filename = file_ + ".html"
+        fw = open("./HTML/" + filename, "w+")
+        fw.write(str(page))
+        fw.close()
+
+        table_to_pdf(file_)
+        pdf_to_jpg('./PDF/' + file_ + '.pdf', file_)
+
+        #bounding_boxes_.append(pdf_to_jpg('./PDF/' + file_ + '.pdf', file_))
+
+    #write_to_csv(bounding_boxes_)
 
 end = time.time()
 print(end - start)
+
+generate_html()
+# test = [1,2,3,4,5]
+# for x, y in grouped(test, 2):
+#    print(str(x) + str(y))
