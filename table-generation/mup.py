@@ -120,10 +120,19 @@ def read_words(words_file):
 
 
 def grouped(list_of_words, n):
+    """
+    Groups elements of a list
+    :param list_of_words the list to be grouped
+    :param n size of the group
+    :return groups
+    """
     return zip((*[iter(list_of_words)]*n))
 
 
 def generate_html():
+    """
+    Generates the HTML and calls further methods
+    """
     bounding_boxes_ = []
     for x in os.listdir("./CSS"):
         page = mp.page()
@@ -163,6 +172,3 @@ end = time.time()
 print(end - start)
 
 generate_html()
-# test = [1,2,3,4,5]
-# for x, y in grouped(test, 2):
-#    print(str(x) + str(y))
