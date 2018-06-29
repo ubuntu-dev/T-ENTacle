@@ -74,6 +74,10 @@ class KnowledgeExtractor(object):
             self.learned_patterns = utils.load("learned_patterns.pkl")
         else:
             self.learned_patterns = {}
+        if os.path.exists("all_patterns.pkl"):
+            self.all_patterns = utils.load("all_patterns.pkl")
+        else:
+            self.all_patterns = {}
 
         # pattern information about all the patterns seen so far from all the documents processed
         # if os.path.exists('all_patterns.csv'):
@@ -402,6 +406,23 @@ class KnowledgeExtractor(object):
         with open("all_patterns.pkl", "wb") as f:
             dill.dump(self.all_patterns, f)
 
+    def save(self, model):
+        """
+        Write learning/patterns to file
+        :param model_name: an object model
+        :return:
+        """
+        fname = ""
+        if model == self.learned_patterns:
+            fname = "learned_patterns"
+        elif model == self.all_patterns:
+            fname == "all_patterns"
+        elif model == self.curr_patterns:
+            fname = "current_patterns"
+        with open(fname+".pkl", "wb") as f:
+            dill.dump(model, f)
+
+
     def find_exact_patterns(self, base_pattern):
         '''
         Checks if there are patterns in the current document that match base_pattern, a previously learned pattern.
@@ -549,3 +570,23 @@ class KnowledgeExtractor(object):
                 far_patterns = self.find_far_patterns(entity_name, seed_aliases)
 
         return exact_patterns, close_patterns, far_patterns
+
+
+    def update_learned_patterns(self, entity_name, patterns):
+        """
+        Adds the base_pattern of pattern to the learned patterns for the entity, entity_name
+        :param entity_name: string
+        :param pattern: pattern object or list of pattern objects
+        :return:
+        """
+        if isinstance(patterns, str):
+            patterns = [patterns]
+
+        for pattern in patterns:
+            if entity_name in self.learned_patterns:
+                self.learned_patterns[entity_name]["base_patterns"].append(pattern.base_pattern)
+            else:
+                self.learned_patterns[entity_name]["base_patterns"] = pattern.base_pattern
+                self.learned_patterns[entity_name]["seed_aliases"] = []
+        #save the model, in case of a crash or something
+        self.save(self.learned_patterns)
