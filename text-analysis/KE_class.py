@@ -125,7 +125,21 @@ class KnowledgeExtractor(object):
         #     for ent in doc.ents:
         #         print(ent.text, ent.label_)
         parsed = self.nlp(text)
-        tokenized = [str(token) for token in parsed]
+        tokenized = []
+        for token in parsed:
+            if re.search("\d", str(token)):
+                token = str(token)
+                print(token)
+                symbols = re.compile(r"[^\d,\.a-zA-Z_\/]")
+                if re.search(symbols, token):
+                    token = re.sub(r"([^\d,\.a-zA-Z_\/])", " \1 ", token )
+                    toks = token.split()
+                    toks = [t for t in toks if t]
+                    tokenized.extend(toks)
+                else:
+                    tokenized.append(token)
+            elif not token.is_space:
+                tokenized.append(str(token))
         return tokenized
         #
         # print("\nEntities")

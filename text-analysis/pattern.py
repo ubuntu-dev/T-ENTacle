@@ -11,6 +11,8 @@ class Pattern(object):
     DIGI = 'Digi~'
     UNIT = 'Unit~'
     DATE = 'Date~'
+    TIME = 'Time~'
+    ALPHANUM = 'AlphaNumeric'
     prepos = ['aboard', 'about', 'above', 'across', 'after', 'against', 'along', 'amid', 'among', 'anti', 'around',
               'as',
               'at', 'before', 'behind', 'below', 'beneath', 'beside', 'besides', 'between', 'beyond', 'but', 'by',
@@ -52,7 +54,24 @@ class Pattern(object):
         self.mask = mask
 
     def is_date(self, token):
-        if re.search(r"\\\d{1,2}\\\d{1,2}\\\d{2,4}", token):
+        """
+        TODO make date recognition more robust
+        :param token:
+        :return:
+        """
+        if re.search(r"\d{1,2}\/\d{1,2}\/\d{2,4}", token):
+            return True
+        else:
+            return False
+
+    def is_time(self, token):
+        """
+        TODO unique to locale, make more robust
+        assumes token already has_numeric
+        :param token:
+        :return:
+        """
+        if re.search(r":", token):
             return True
         else:
             return False
@@ -63,6 +82,11 @@ class Pattern(object):
         else:
             return False
 
+    def has_alpha(self, token):
+        if re.search(r"[a-zA-Z]", token):
+            return True
+        else:
+            return False
 
     def is_punc(self, s):
         if re.match('[^a-zA-Z\d]', s):
@@ -83,9 +107,16 @@ class Pattern(object):
             if token in Pattern.prepos:
                 signature.append((token, token, Pattern.PREP))
             elif self.is_date(token):
-                signature.append(token, Pattern.DATE, Pattern.DATE)
+                signature.append((token, Pattern.DATE, Pattern.DATE))
             elif self.has_numeric(token):
-                signature.append((token, Pattern.DIGI, Pattern.DIGI))
+                if self.has_alpha(token):
+                    signature.append((token, Pattern.ALPHANUM, Pattern.ALPHANUM))
+                elif self.is_time(token):
+                    signature.append((token, Pattern.TIME, Pattern.TIME))
+                else:
+                    signature.append((token, Pattern.DIGI, Pattern.DIGI))
+            # elif self.is_punc(token):
+            #     signature.append((token, token, Pattern.PUNC))
             elif token.isalpha():
                 sign = [token, token, Pattern.WORD]
                 if token.lower() in Pattern.units:
@@ -217,7 +248,17 @@ class Pattern(object):
             indices = [i for i in range(len(self.base_pattern)) if self.base_pattern[i] == Pattern.DIGI]
             for instance in instances:
                 for i in indices:
-                    as_num.append(locale.atof(instance[i]))
+                    number = instance[i]
+                    #check if the number is a fraction:
+                    if "/" in number:
+                        nums = number.split('/')
+                        if len(nums) > 2: #then it's not a fraction!
+                            continue
+                        else:
+                            number = int(nums[0])/int(nums[1])
+                            as_num.append(number)
+                    else:
+                        as_num.append(locale.atof(number))
         as_num.sort()
         return as_num
 
