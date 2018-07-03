@@ -5,16 +5,30 @@ import utils
 import os
 import pandas as pd
 import numpy as np
-import click
 from KE_class import KnowledgeExtractor
 from pattern import Pattern
 import locale
 
-class KE_Interface:
-    def __init__(self):
+class Interface:
+    def __init__(self, seed_path):
         #set object vars
-        self.entity_seeds = [] #list of entities to look for
+        self.entity_seeds = self.set_entity_seeds(seed_path)
         self.knowledge_extractor = KnowledgeExtractor()
+
+    def set_entity_seeds(self, seed_path):
+        """
+        TODO add file validation with try except block
+        Sets the entity seeds in the file seed_path.
+        :param seed_path: string.
+        :return:
+        """
+        if seed_path:
+            with open(seed_path, "r") as f:
+                seeds = f.readlines()
+                self.entity_seeds = [name.strip() for name in seeds if name]
+        else:
+            self.entity_seeds = []
+
 
     def get_user_selection(self, entity_name, patterns, knowledge_extractor, select_mask=True):
         """
@@ -170,51 +184,3 @@ class KE_Interface:
         #             close()
         #
 
-    @click.command()
-    @click.argument('path')
-    @click.option('--i/--no-i', default=True, help='choose --i for interactive')
-    @click.option('--a/--no-a', default=False,
-                  help='choose --a to auto skip exact patterns when in interactive mode. False by default.')
-    @click.option('--f/--no-f', default=False,
-                  help='choose --f to start fresh (all previous learning will be removed)')
-    @click.option('--e', help='give the path to the list of entities. One entity per line.')
-    def cli(self, path, i, a, f, e=''):
-        '''
-            The main function that drives the command line interface
-            detect if dir or file and accordingly iterates or not over multiple docs
-            :param file_path:
-            :return:
-            '''
-
-        #if a fresh start is indicated, then remove all previous learning
-        if f:
-            utils.remove_files(['learned_patterns.csv','all_patterns.csv','current_patterns.csv','counter','report.csv'])
-
-        strict=not i
-
-        #load the seed entities
-        if e!='':
-            with open(e, "r") as f:
-                self.entity_seeds = f.readlines()
-            self.entity_seeds = [name.strip() for name in self.entity_seeds]
-        else:
-            self.entity_seeds=[]
-
-        #TODO decide if each document should have its own KE object, or if it should share. prob its own??
-
-        #read the files
-        if os.path.isdir(path):
-            for root, dirs, files in os.walk(path):
-                for file in files:
-                    #TODO: make checking for correct file types more robust
-                    if file == '.DS_Store':
-                        continue
-                    # initialize a knowledge extractor
-                    self.single_doc_cli(os.path.join(root, file), self.entity_seeds, strict, a)
-        elif os.path.isfile(path):
-
-            self.single_doc_cli(path, self.entity_seeds, strict, a)
-
-if __name__ == "__main__":
-    interface = KE_Interface()
-    interface.cli()
