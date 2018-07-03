@@ -154,20 +154,21 @@ class KE_Interface:
         ke.create_patterns_per_doc(parsed_text)
         #TODO ? set all_patterns?
 
-        if len(self.entity_seeds)>0:
-             for entity_name in self.entity_seeds:
+        if len(self.entity_seeds) > 0:
+            for entity_name in self.entity_seeds:
                 print('Processing the entity: '+entity_name)
                 self.interact_for_single_entity(entity_name, strict=strict, auto_skip=auto_skip)
-             close()
-        else:
-            continue_cli = True
-            while continue_cli:
-                entity_name = input('Enter the entity you\'d like to search:')
-                self.interact_for_single_entity(entity_name, ke)
-                decision=input('Do you want to continue searching: y or n')
-                if decision=='n':
-                    continue_cli=False
-                    close()
+        #      close()
+        # else:
+        #     continue_cli = True
+        #     while continue_cli:
+        #         entity_name = input('Enter the entity you\'d like to search:')
+        #         self.interact_for_single_entity(entity_name, ke)
+        #         decision=input('Do you want to continue searching: y or n')
+        #         if decision=='n':
+        #             continue_cli=False
+        #             close()
+        #
 
     @click.command()
     @click.argument('path')
@@ -214,3 +215,6 @@ class KE_Interface:
 
             self.single_doc_cli(path, self.entity_seeds, strict, a)
 
+if __name__ == "__main__":
+    interface = KE_Interface()
+    interface.cli()
