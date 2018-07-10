@@ -1,5 +1,10 @@
 """
 TODO: write close function, put load and save in utils
+
+Once a pattern has been learned, should it be removed from current patterns? For example,
+if a user selects a pattern for "Average Pressure", and that pattern is left in current patterns,
+it could be suggested again for something like "Max Pressure". This could be good in the case
+of multiple possible matches, or bad if we desire uniqueness. There could be a flag to specify...
 """
 import utils
 import os
@@ -8,6 +13,7 @@ import numpy as np
 from KE_class import KnowledgeExtractor
 from pattern import Pattern
 import locale
+import ast
 
 class Interface:
     def __init__(self, seed_path):
@@ -22,15 +28,18 @@ class Interface:
         :param seed_path: string.
         :return:
         """
+        print("trying to set entity seeds")
         if seed_path:
             with open(seed_path, "r") as f:
                 seeds = f.readlines()
-                self.entity_seeds = [name.strip() for name in seeds if name]
+                entity_seeds = [name.strip() for name in seeds if name]
         else:
-            self.entity_seeds = []
+            print("no entity seeds were passed")
+            entity_seeds = []
+        return entity_seeds
 
 
-    def get_user_selection(self, entity_name, patterns, knowledge_extractor, select_mask=True):
+    def get_user_selection(self, entity_name, patterns, select_mask=True):
         """
         Allows the user to select the best matching patterns for the entity, entity_name. After selecting the patterns,
         the user can also select to only keep part of the pattern.
@@ -48,27 +57,31 @@ class Interface:
         count = 0
         menu = ""
         for p in patterns:
-            menu = str(count) + ". " + p.instances[0] + "\n"
+            menu += str(count) + ". " + " ".join(p.instances[0]) + "\n"
             count += 1
 
         print("I found the following patterns that may represent " + entity_name + ".\n")
         print(menu)
-        output = \
-        """Please enter the indices, separated by spaces, of all of the patterns you wish to select.
-        Or enter s to skip this entity or v to search by value."""
+        output = "Please enter the indices, separated by spaces, of all of the patterns you wish to select.\n" + \
+                 "Or enter s to skip this entity or v to search by value."
         pattern_selection = input(output)
         if pattern_selection in ['v', 'V', 's', 'S']:
             return pattern_selection
 
-        patterns_to_keep = [patterns[i] for i in pattern_selection]
+        #TODO more user validation here. For now assume user behaves as expected
+        pattern_selection = pattern_selection.split(" ")
+        patterns_to_keep = [patterns[int(i)] for i in pattern_selection if i]
 
         for p in patterns_to_keep:
+            print("You chose "+ " ".join(p.instances[0]))
+            print("The value of select mask is ", select_mask)
             if select_mask:
             # for each pattern that the user selected, allow them to select the appropriate tokens (the mask).
                 valid_input = False
                 while not valid_input:
-                    mask_message = "Please enter, separated by spaces, the indices of the pattern " + p.instances[0] + \
-                                    " you wish to keep. Or enter a to keep all."
+                    print(p.instances[0])
+                    mask_message = "Please enter, separated by spaces, the indices of the pattern \"" + " ".join(p.instances[0]) + \
+                                    "\" you wish to keep. Or enter a to keep all."
                     print(mask_message)
                     output = [str(i) + " " + p.instances[0][i] for i in range(len(p.instances[0]))]
                     output = "\t".join(output)
@@ -78,6 +91,8 @@ class Interface:
                         p.set_mask(new_mask)
                     else:
                         try:
+                            mask_selection = mask_selection.split(" ")
+                            mask_selection = [s for s in mask_selection if s]
                             new_mask = [int(i) for i in mask_selection]
                             if len(new_mask) <= len(p.instances[0]):
                                 p.set_mask(new_mask)
@@ -87,7 +102,7 @@ class Interface:
                         except ValueError:
                             print("I didn't understand your input. Please try again.")
 
-            knowledge_extractor.update_learned_patterns(p)
+            self.knowledge_extractor.update_learned_patterns(entity_name, p)
         return None
 
     def get_value_from_user(self):
@@ -111,61 +126,76 @@ class Interface:
         '''
         #first check if we have already learned the entity or something similar to it
         exact_patterns, close_patterns, far_patterns = self.knowledge_extractor.matcher_bo_entity(entity_name)
+        print("far patterns")
+        for p in far_patterns:
+            print(p.base_pattern)
 
         #save the results if we have any, and poke the user if needed.
+        print("strict ", strict)
         if strict == True:
             #do not interact with the user at all
             if len(exact_patterns) == 0:
                 print('Since no exact pattern found, and interactive is False. Skipping this entity.')
                 return
             else:
+                print("Adding exact matches")
                 #only add exact matches
                 self.knowledge_extractor.update_learned_patterns(entity_name, exact_patterns)
 
         else:
-            if auto_skip == True:
-                change_search = None
+            print("interactive mode")
+            selection = None
+            if auto_skip == True and len(exact_patterns) != 0:
                 # don't bother the user for exact matches, just save
-                if len(exact_patterns) != 0:
-                    self.knowledge_extractor.update_learned_patterns(entity_name, exact_patterns)
-                #get user input if we found close or far matches
-                elif len(close_patterns) != 0:
-                    change_search = self.get_user_selection(entity_name, close_patterns, False)
-                elif len(far_patterns) != 0:
-                    change_search = self.get_user_selection(entity_name, far_patterns, False)
+                print("auto skip is on")
+                print("Found exact pattern")
+                self.knowledge_extractor.update_learned_patterns(entity_name, exact_patterns)
+            #get user input if we found close or far matches
+            elif len(close_patterns) != 0:
+                print("Found close patterns")
+                #TODO should this be true?
+                selection = self.get_user_selection(entity_name, close_patterns, False)
+            elif len(far_patterns) != 0:
+                print("Found far patterns")
+                selection = self.get_user_selection(entity_name, far_patterns, True)
 
-                #check if the user wants to skip this entity or search by value instead
-                if change_search == "s" or change_search == "S":
-                    return
-                if change_search == "v" or change_search == "V":
-                    #TODO right now, only searches for nums, maybe we want to allow to search by date etc
-                    value = self.get_value_from_user()
-                    try:
-                        value_as_float = locale.atof(value)
-                        value_patterns = self.knowledge_extractor.matcher_bo_num(value_as_float)
-                        if value_patterns:
-                            self.get_user_selection(entity_name, value_patterns)
+            else:
+                print("I couldn't find anything that matched the entity. ")
+                return
 
-                    except ValueError:
-                        #TODO better error handling
-                        print("Sorry, I didn't understand that input. ")
+            #check if the user wants to skip this entity or search by value instead
+            if selection == "s" or selection == "S":
+                return
+            if selection == "v" or selection == "V":
+                #TODO right now, only searches for nums, maybe we want to allow to search by date etc
+                value = self.get_value_from_user()
+                try:
+                    value_as_float = locale.atof(value)
+                    value_patterns = self.knowledge_extractor.matcher_bo_num(value_as_float)
+                    if value_patterns:
+                        self.get_user_selection(entity_name, value_patterns)
+
+                except ValueError:
+                    #TODO better error handling
+                    print("Sorry, I didn't understand that input. ")
 
 
     def single_doc_cli(self, file_path, strict=False, auto_skip=False):
         '''
         controls the flow of the CLI
         :param file_path: string. The file path of a document to process
-        :param knowledge_extractor: KnowledgeExtractor object. This object will process all the
-                                    documents.
+
         :return:
         '''
 
-        #init(file_path)
+        #maybe os dependent TODO change to some other way of getting doc name from file path
+        doc_name = file_path.split("/")[-1]
         #parse the document for text with tika
-        parsed_text = utils.parse_document(file_path)
+        # parsed_text = utils.parse_document(file_path)
+        with open(file_path, "r") as f:
+            parsed_text = f.readlines()
         #create knowledge extractor object and find all patterns
-        ke = KnowledgeExtractor()
-        ke.create_patterns_per_doc(parsed_text)
+        self.knowledge_extractor.create_patterns_per_doc(parsed_text, doc_name)
         #TODO ? set all_patterns?
 
         if len(self.entity_seeds) > 0:

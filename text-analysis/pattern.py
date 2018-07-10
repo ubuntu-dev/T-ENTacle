@@ -32,8 +32,7 @@ class Pattern(object):
     locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
     def __init__(self, tokens, page_num, doc_name, id):
-        print(tokens)
-        self.instance = tokens
+        self.instance = tokens #list of strings
         self.page_num = page_num
         self.hpattern = self._create_hpattern(self.instance)
         self.base_pattern = self.get_base_pattern(self.hpattern)
@@ -128,7 +127,10 @@ class Pattern(object):
                 signature.append((token, token, Pattern.PUNC))
             else:
                 if token:
-                    signature.append(tuple(token))
+                    #TODO ask Asitang what the goal was here. This seems to break things for me
+                    #signature.append(tuple(token))
+                    #rewrite as
+                    signature.append((token, token, token))
 
         return tuple(signature)
 
@@ -153,11 +155,11 @@ class Pattern(object):
         if isinstance(new_instance, tuple):
             self.instances.append(new_instance)
             self.all_nums.append(self.convert_to_num(new_instance))
-            self.all_nums.sort()
+           # self.all_nums.sort()
         elif isinstance(new_instance, list):
             self.instances.extend(new_instance)
             self.all_nums.extend(self.convert_to_num(new_instance))
-            self.all_nums.sort()
+            #self.all_nums.sort()
         else:
             error_message = 'Expected a string or list but got type ' + str(type(new_instance))
             raise TypeError(error_message)
@@ -233,8 +235,30 @@ class Pattern(object):
 
     def get_dict(self):
         as_dict = {'instances': self.instances, 'page_numbers': self.page_nums, 'hpattern': self.hpattern,
-                   'base_pattern': self.base_pattern, 'doc_name': self.doc_name}
+                   'base_pattern': self.base_pattern, 'document_name': self.doc_name, 'num_instances': len(self.instances)}
         return as_dict
+
+    def _convert_to_num_helper(self, instance, indices, as_num):
+        for i in indices:
+            number = instance[i]
+            try:
+                # check if the number is a fraction:
+                if "/" in number:
+                    nums = number.split('/')
+                    if len(nums) > 2:  # then it's not a fraction!
+                        continue
+                    else:
+                        number = int(nums[0]) / int(nums[1])
+                        as_num.append(number)
+                else:
+                    as_num.append(locale.atof(number))
+            except ValueError:
+                print(ValueError)
+                print(self.hpattern)
+                print("index " + str(i))
+                print(instance)
+                print(number)
+        return as_num
 
     def convert_to_num(self, instances):
         """
@@ -246,19 +270,15 @@ class Pattern(object):
         as_num = []
         if Pattern.DIGI in self.base_pattern:
             indices = [i for i in range(len(self.base_pattern)) if self.base_pattern[i] == Pattern.DIGI]
-            for instance in instances:
-                for i in indices:
-                    number = instance[i]
-                    #check if the number is a fraction:
-                    if "/" in number:
-                        nums = number.split('/')
-                        if len(nums) > 2: #then it's not a fraction!
-                            continue
-                        else:
-                            number = int(nums[0])/int(nums[1])
-                            as_num.append(number)
-                    else:
-                        as_num.append(locale.atof(number))
+            if isinstance(instances, list):
+                for instance in instances:
+                    as_num = self._convert_to_num_helper(instance, indices, as_num)
+            elif isinstance(instances, tuple):
+                as_num = self._convert_to_num_helper(instances, indices, as_num)
+            else:
+                raise ValueError
+                print("Expected type list or tuple but got type " + type(instances))
+
         as_num.sort()
         return as_num
 

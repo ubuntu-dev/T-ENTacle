@@ -57,7 +57,7 @@ class KnowledgeExtractor(object):
     units = ['ft', 'gal', 'ppa', 'psi', 'lbs', 'lb', 'bpm', 'bbls', 'bbl', '\'', "\"", "'", "°", "$", 'hrs']
     learned_patterns, all_patterns, current_patterns, interesting_patterns, fuzzy_patterns = [], [], [], [], []
 
-    def __init__(self, threshold=10):
+    def __init__(self, threshold=1):
         # save state across documents
         if os.path.exists('counter'):
             self.counter = utils.load('counter')
@@ -76,6 +76,7 @@ class KnowledgeExtractor(object):
         else:
             self.learned_patterns = {}
         if os.path.exists("all_patterns.pkl"):
+            print("loaded all patterns")
             self.all_patterns = utils.load("all_patterns.pkl")
         else:
             self.all_patterns = {}
@@ -94,7 +95,7 @@ class KnowledgeExtractor(object):
             self.all_patterns = {}
         #####################################
         #TODO refactor, move away from DF of current_patterns and move to list of pattern objects
-        self.current_patterns = pd.DataFrame(columns=['pattern_id', 'base_pattern', 'instances', 'hpattern',
+        self.current_patterns = pd.DataFrame(columns=['base_pattern', 'instances', 'hpattern',
                                                       'document_name', 'num_instances', 'mask','page_numbers'])
         self.current_patterns.index.name = 'id'
         self.threshold = threshold
@@ -129,7 +130,6 @@ class KnowledgeExtractor(object):
         for token in parsed:
             if re.search("\d", str(token)):
                 token = str(token)
-                print(token)
                 symbols = re.compile(r"[^\d,\.a-zA-Z_\/]")
                 if re.search(symbols, token):
                     token = re.sub(r"([^\d,\.a-zA-Z_\/])", " \1 ", token )
@@ -262,8 +262,14 @@ class KnowledgeExtractor(object):
         :return bool
         '''
         # if the first token is preposition/pronoun or punctuation then get rid of it
-        if pattern.hpattern[0][2] == Pattern.PREP or pattern.hpattern[0][2] == Pattern.PUNC:
-            return False
+        try:
+            if pattern.hpattern[0][2] == Pattern.PREP or pattern.hpattern[0][2] == Pattern.PUNC:
+                return False
+        except IndexError:
+            print("IndexError")
+            print(pattern.instances)
+            print(pattern.hpattern)
+            exit(1)
         return True
 
     def no_entity_filter(self, pattern):
@@ -316,10 +322,8 @@ class KnowledgeExtractor(object):
         :param: patterns, list of pattern objects
         :return:
         '''
-        print(len(patterns))
         for f in filters:
             patterns = list(filter(f, patterns))
-            print(len(patterns))
             if not patterns:
                 print("Uh oh, we've filtered out everything. There were no meaningful patterns. ")
         print('FILTERED! now number of patterns: ', len(patterns))
@@ -336,13 +340,15 @@ class KnowledgeExtractor(object):
         if not self.all_patterns:
             print("Setting allpatterns for the first time")
             self.all_patterns = copy.deepcopy(self.curr_patterns)
-            return
-        for basepattern in self.curr_patterns.keys():
-            if basepattern in self.all_patterns:
-                #update all_patterns with the additional instances and documents
-                self.all_patterns[basepattern].add(self.curr_patterns[basepattern].location)
-            else:
-                self.all_patterns[basepattern] = self.curr_patterns[basepattern]
+        else:
+        #add the patterns in current patterns to all_patterns. The pattern objects in all_patterns
+        #need to have their instances and document names updated.
+            for basepattern in self.curr_patterns.keys():
+                if basepattern in self.all_patterns:
+                    #update all_patterns with the additional instances and documents
+                    self.all_patterns[basepattern].add(self.curr_patterns[basepattern].location)
+                else:
+                    self.all_patterns[basepattern] = self.curr_patterns[basepattern]
 
     def create_patterns_per_doc(self, parsed_text, doc_name = None):
         '''
@@ -411,6 +417,7 @@ class KnowledgeExtractor(object):
         #merge patterns with all the other patterns. If we have seen the same patterns before, they should just
         #be added based on their base_pattern
         self.add_curr_to_all_patterns()
+        self.save(self.all_patterns)
         #self.all_patterns = pd.concat([self.current_patterns, self.all_patterns])
 
     def save_all_patterns(self):
@@ -427,6 +434,8 @@ class KnowledgeExtractor(object):
         :param model_name: an object model
         :return:
         """
+        #TODO get the pwd and add to path. all_patterns doesn't seem to be saving
+        base_path = os.getcwd()
         fname = ""
         if model == self.learned_patterns:
             fname = "learned_patterns"
@@ -434,7 +443,9 @@ class KnowledgeExtractor(object):
             fname == "all_patterns"
         elif model == self.curr_patterns:
             fname = "current_patterns"
-        with open(fname+".pkl", "wb") as f:
+        fname = fname + ".pkl"
+        fpath = os.path.join(base_path, fname)
+        with open(fpath, "wb") as f:
             dill.dump(model, f)
 
 
@@ -515,13 +526,14 @@ class KnowledgeExtractor(object):
         :return:
         """
         aliases.append(entity_name)
-        far_patterns = []
+        far_patterns = {}
         for k, p in self.curr_patterns.items():
             entities = p.find_entities()
             for entity in entities:
                 for alias in aliases:
-                    if fuzz.ratio(alias.lower(), entity) > 50:
-                        far_patterns.append(p)
+                    score = fuzz.ratio(alias.lower(), entity)
+                    if score > 50:
+                        far_patterns[p] = score
         return far_patterns
 
 
@@ -564,7 +576,8 @@ class KnowledgeExtractor(object):
                 else:
                     #look for patterns in the current document that are similar to the previously learned patterns
                     #TODO: what if there is an exact match and a close match? Could there be more than one representation?
-                    print('finding patterns in this document close to the learned patterns ...')
+                    print('No exact match found. Finding patterns in this document close to the learned patterns ...')
+                    print(pre_learned_bpatterns)
                     close_pats = list(map(self.find_close_patterns, pre_learned_bpatterns))
                     #close_patterns is a list of dictionaries. Key pattern, value confidence.
                     #  First aggregate keys into one big dictionary
@@ -579,10 +592,13 @@ class KnowledgeExtractor(object):
                     close_patterns = [tup[0] for tup in close_p]
 
 
-            #if we haven't learned anything about this entity, maybe there is a pattern similar
-            #to the entity name or its aliases
-            else:
-                far_patterns = self.find_far_patterns(entity_name, seed_aliases)
+        #if we haven't learned anything about this entity, check for patterns in the current document that are similar
+        #to the entity name and seed_aliases
+        else:
+            print("This entity hasn't been learned yet. Looking for patterns that are similar to the entity name.")
+            far_p = self.find_far_patterns(entity_name, seed_aliases)
+            far_p = sorted(far_p.items(), key=lambda x: x[1], reverse = True)
+            far_patterns = [tup[0] for tup in far_p]
 
         return exact_patterns, close_patterns, far_patterns
 
@@ -593,7 +609,7 @@ class KnowledgeExtractor(object):
         :return: 
         """
         found_patterns = []
-        for p in self.curr_patterns:
+        for base_pattern, p in self.curr_patterns.items():
             if entity_value in p.all_nums:
                 found_patterns.append(p)
         return found_patterns
@@ -606,14 +622,15 @@ class KnowledgeExtractor(object):
         :param pattern: pattern object or list of pattern objects
         :return:
         """
-        if isinstance(patterns, str):
+        if isinstance(patterns, Pattern):
             patterns = [patterns]
 
         for pattern in patterns:
             if entity_name in self.learned_patterns:
                 self.learned_patterns[entity_name]["base_patterns"].append(pattern.base_pattern)
             else:
-                self.learned_patterns[entity_name]["base_patterns"] = pattern.base_pattern
+                self.learned_patterns[entity_name] = {}
+                self.learned_patterns[entity_name]["base_patterns"] = [pattern.base_pattern]
                 self.learned_patterns[entity_name]["seed_aliases"] = []
         #save the model, in case of a crash or something
         self.save(self.learned_patterns)
