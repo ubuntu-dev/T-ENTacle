@@ -191,9 +191,12 @@ class Interface:
         #maybe os dependent TODO change to some other way of getting doc name from file path
         doc_name = file_path.split("/")[-1]
         #parse the document for text with tika
-        # parsed_text = utils.parse_document(file_path)
-        with open(file_path, "r") as f:
-            parsed_text = f.readlines()
+        parsed_text = utils.parse_document(file_path)
+
+        #this line for testing on a txt without tika
+        # with open(file_path, "r") as f:
+        #     parsed_text = f.readlines()
+        
         #create knowledge extractor object and find all patterns
         self.knowledge_extractor.create_patterns_per_doc(parsed_text, doc_name)
         #TODO ? set all_patterns?
