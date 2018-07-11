@@ -2,6 +2,9 @@
 
 import itertools
 import json
+import csv
+
+parameters = {}
 
 def build_json(index, lth, lty, lclr):
     """
@@ -21,13 +24,54 @@ def build_json(index, lth, lty, lclr):
     })
     return data
 
+def load_params(): 
+    map_of_probs = {}
+    main_keys = []
+    counter_1 = 0
+    counter_2 = 1
+    with open('hyperparams.csv') as csvfile:
+        readCSV = csv.reader(csvfile, delimiter=',')
+        k_row = []
+        v_row = []
+        for row in readCSV:
+            counter_1 = counter_1 + 1
+            if counter_1 > 2:
+                continue
+            if counter_1 == 1:
+                main_key = row[0]
+                parameters[main_key] = {}
+                k_row = row
+                k_row.remove(k_row[0])
+            elif counter_1 == 2:
+                v_row = row
+                v_row.remove(v_row[0])
+        for key, value in zip(k_row, v_row):
+            parameters[main_key][key] = value
+    with open('./hyperparams.csv') as f:
+        for line_keys, line_values in itertools.zip_longest(*[f]*2):
+            if counter_2 == 1:
+                counter_2 = counter_2 + 1
+                continue
+            k_row = line_keys.split(',')
+            v_row = line_values.split(',')
+            main_key = k_row[0]
+            parameters[main_key] = {}
+            k_row.remove(k_row[0])
+            v_row.remove(v_row[0])
+            for key, value in zip(k_row, v_row):
+                if (len(key) <= 0 or key == '\n'):
+                    continue
+                parameters[main_key][key] = value
+            counter_2 = counter_2 + 1
+            
+
 def main():
     """
     Performs CSS and JSON generation
     """
-    line_type = ['dotted', 'solid']
-    line_color = ['blue', 'red', 'black', 'cyan']
-    line_thickness = ['1px', '2px', '3px']
+    # line_type = ['dotted', 'solid']
+    # line_color = ['blue', 'red', 'black', 'cyan']
+    # line_thickness = ['1px', '2px', '3px']
 
     data = {}
     data['tables'] = []
@@ -59,4 +103,6 @@ def main():
             json.dump(table_str_json, outfile)
 
 
-main()
+#main()
+load_params()
+print(parameters)
