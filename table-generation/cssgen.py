@@ -25,6 +25,9 @@ def build_json(index, lth, lty, lclr):
     return data
 
 def load_params(): 
+    """
+    Loads the csv files and builds a nested dictionary to represent all parameters and their percentages/probabilities
+    """
     map_of_probs = {}
     main_keys = []
     counter_1 = 0
@@ -63,7 +66,7 @@ def load_params():
                     continue
                 parameters[main_key][key] = value
             counter_2 = counter_2 + 1
-            
+
 
 def main():
     """
