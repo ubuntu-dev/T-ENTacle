@@ -231,13 +231,13 @@ class Pattern(object):
         """
         report = {}
 
-        for doc, val in self.location.items():
+        for doc, dct in self.location.items():
             report[doc] = {}
-            values = self.find_values(doc["instances"])
-            for tup in zip(doc["page_num"], values):
+            values = self.find_values(dct["instances"])
+            for tup in zip(dct["page_num"], values):
                 if tup[0] not in report[doc]:
                     report[doc][tup[0]] = []
-                report[doc][tup[0]].append("\n".join(tup[1]))
+                report[doc][tup[0]].append(tup[1])
         return report
 
     def get_string(self):
@@ -259,6 +259,13 @@ class Pattern(object):
         return as_dict
 
     def _convert_to_num_helper(self, instance, indices, as_num):
+        """
+        TODO this doesn't really work because some numbers are not really values like 25.789.67
+        :param instance:
+        :param indices:
+        :param as_num:
+        :return:
+        """
         for i in indices:
             number = instance[i]
             try:

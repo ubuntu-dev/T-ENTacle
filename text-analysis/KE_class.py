@@ -57,7 +57,7 @@ class KnowledgeExtractor(object):
     units = ['ft', 'gal', 'ppa', 'psi', 'lbs', 'lb', 'bpm', 'bbls', 'bbl', '\'', "\"", "'", "°", "$", 'hrs']
     learned_patterns, all_patterns, current_patterns, interesting_patterns, fuzzy_patterns = [], [], [], [], []
 
-    def __init__(self, threshold=1):
+    def __init__(self, threshold=10):
         # save state across documents
         if os.path.exists('counter'):
             self.counter = utils.load('counter')
@@ -656,24 +656,27 @@ class KnowledgeExtractor(object):
                 if doc not in docs_and_pages:
                     docs_and_pages[doc] = []
                 #the keys are all the page numbers
-                docs_and_pages[doc].extend(entity_report[doc].keys)
+                docs_and_pages[doc].extend(list(entity_report[doc].keys()))
             #remove duplicates of pages
             for k,v in docs_and_pages.items():
                 docs_and_pages[k] = list(set(docs_and_pages[k])) #TODO this is bad programming practice change this later
             report[entity_name] = entity_report
 
         #convert weird nested dict to weird dataframe
-        cols = list(self.learned_patterns.keys()) + ["Document"]
-        df_report = pd.DataFrame(columns=cols)
+        # cols = list(self.learned_patterns.keys()) + ["Document"]
+        # df_report = pd.DataFrame(columns=cols)
 
         #add all the entities to a row of the dataframe page by page, document by document
+        all_rows = []
         for doc, pages in docs_and_pages.items():
             for page in pages:
                 row = {"Document": doc}
-                for entity_name, d in report:
-                    value_str = d[doc][page]
+                for entity_name, d in report.items():
+                    value_list = d[doc][page]
+                    #convert the list of values to a string of line separated values
+                    value_str = "\n".join(value_list)
                     row[entity_name] = value_str
-                df_report.append(row, ignore_index=True)
-
+                all_rows.append(row)
+        df_report = pd.DataFrame(all_rows)
         #write to csv
         df_report.to_csv("report.csv")

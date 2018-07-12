@@ -89,6 +89,7 @@ class Interface:
                     if mask_selection == "a" or mask_selection == "A":
                         new_mask = list(range(len(p.instances[0])))
                         p.set_mask(new_mask)
+                        valid_input = True
                     else:
                         try:
                             mask_selection = mask_selection.split(" ")
