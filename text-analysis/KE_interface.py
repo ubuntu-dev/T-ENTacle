@@ -205,15 +205,7 @@ class Interface:
             for entity_name in self.entity_seeds:
                 print('Processing the entity: '+entity_name)
                 self.interact_for_single_entity(entity_name, strict=strict, auto_skip=auto_skip)
-        #      close()
-        # else:
-        #     continue_cli = True
-        #     while continue_cli:
-        #         entity_name = input('Enter the entity you\'d like to search:')
-        #         self.interact_for_single_entity(entity_name, ke)
-        #         decision=input('Do you want to continue searching: y or n')
-        #         if decision=='n':
-        #             continue_cli=False
-        #             close()
-        #
+
+        #once finished generate a report of what has been learned.
+        self.knowledge_extractor.make_report_by_page()
 

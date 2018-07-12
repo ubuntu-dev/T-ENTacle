@@ -209,16 +209,36 @@ class Pattern(object):
                 units.append(token[0])
         return units
 
-    def find_values(self):
+    def find_values(self, instances = None):
         """
         Return the numerical part(s) of the pattern
         :return: values, list of strings representing numbers
         """
-        values = []
-        for token in [self.hpattern[i] for i in self.mask]:
-            if token[3] == self.DIGI:
-                values.append(token[0])
+        if not instances:
+            instances = self.instances
+        indices = []
+        for i in range(len(self.base_pattern)):
+            if i in self.mask and self.base_pattern[i] == self.DIGI:
+                indices.append(i)
+        values = [" ".join([inst[i] for i in indices]) for inst in instances]
         return values
+
+    def report(self):
+        """
+        aggregate all the instances by document and then by page
+        report is in form {docname: {page1 : "val1\nval2\nval3"}, {page2 : "val1\nval2\nval3"}}
+        :return:
+        """
+        report = {}
+
+        for doc, val in self.location.items():
+            report[doc] = {}
+            values = self.find_values(doc["instances"])
+            for tup in zip(doc["page_num"], values):
+                if tup[0] not in report[doc]:
+                    report[doc][tup[0]] = []
+                report[doc][tup[0]].append("\n".join(tup[1]))
+        return report
 
     def get_string(self):
         """

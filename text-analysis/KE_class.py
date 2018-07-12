@@ -632,5 +632,48 @@ class KnowledgeExtractor(object):
                 self.learned_patterns[entity_name] = {}
                 self.learned_patterns[entity_name]["base_patterns"] = [pattern.base_pattern]
                 self.learned_patterns[entity_name]["seed_aliases"] = []
+
         #save the model, in case of a crash or something
         self.save(self.learned_patterns)
+
+
+    def make_report_by_page(self):
+        """
+        This is a mess and hopefully a soon to be deprecated function. Don't look at me with those judgemental eyes.
+        :return:
+        """
+        report = {}
+        docs_and_pages = {}
+        for entity_name, values in self.learned_patterns.items():
+            base_patterns = self.learned_patterns[entity_name]["base_patterns"]
+            entity_report = {}
+            for bp in base_patterns:
+                #get the pattern object
+                p = self.all_patterns[bp]
+                pat_report = p.report()
+                entity_report.update(pat_report)
+            for doc, values in entity_report.items():
+                if doc not in docs_and_pages:
+                    docs_and_pages[doc] = []
+                #the keys are all the page numbers
+                docs_and_pages[doc].extend(entity_report[doc].keys)
+            #remove duplicates of pages
+            for k,v in docs_and_pages.items():
+                docs_and_pages[k] = list(set(docs_and_pages[k])) #TODO this is bad programming practice change this later
+            report[entity_name] = entity_report
+
+        #convert weird nested dict to weird dataframe
+        cols = list(self.learned_patterns.keys()) + ["Document"]
+        df_report = pd.DataFrame(columns=cols)
+
+        #add all the entities to a row of the dataframe page by page, document by document
+        for doc, pages in docs_and_pages.items():
+            for page in pages:
+                row = {"Document": doc}
+                for entity_name, d in report:
+                    value_str = d[doc][page]
+                    row[entity_name] = value_str
+                df_report.append(row, ignore_index=True)
+
+        #write to csv
+        df_report.to_csv("report.csv")
