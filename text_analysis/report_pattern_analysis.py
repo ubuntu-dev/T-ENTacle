@@ -37,6 +37,8 @@ def align_separate(arr, gt):
     last_found=-1
     i=0
     for j in range(len(arr)):
+        if arr[j] not in gt:
+            continue
         notfound = True
         while notfound:
             if i==len(gt):
@@ -56,13 +58,13 @@ def rec_separate(data,stage):
     # stage=3
 
     entities=list(set(data))
-
     splits=np.split(data,np.argwhere(data==stage).flatten())
 
 
     per_entity_pattern={}
     for i in range(1, len(splits)-1):
         split=splits[i][1:]
+        # print(split)
         for entity in entities:
             patt=list(np.argwhere(split==entity).flatten())
             if len(patt)!=0:
@@ -71,13 +73,13 @@ def rec_separate(data,stage):
 
                 per_entity_pattern[entity].append(patt)
 
-    print(per_entity_pattern)
+    # print(per_entity_pattern)
 
     # create the best blueprint
 
     blueprint={}
     for ent, value in per_entity_pattern.items():
-        # print(value)
+        # print(ent, value)
         mode=mode_tup(value)
         for mod in mode:
             blueprint[mod]=ent
@@ -106,8 +108,8 @@ def rec_separate(data,stage):
 
     for record in records:
         if len(record)>len(bp):
-            # potential multiple records
-            print(record)
+            # print('potential multiple records')
+            # print(record)
             rec_inds=align_separate(record, bp)
             begin=0
             for rec_ind in rec_inds:

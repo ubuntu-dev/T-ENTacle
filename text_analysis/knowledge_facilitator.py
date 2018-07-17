@@ -198,7 +198,7 @@ def find_values(instance, hpattern, mask=[]):
     for token_inst,token_patt,select in zip(instance, hpattern, mask):
         if not select:
             continue
-        if token_patt[2]==DIGI :
+        if token_patt[2]==DIGI:
             values.append(token_inst)
     return values
 
@@ -297,7 +297,7 @@ def find_far_patterns(entity_name, aliases=[]):
 
     return far_pattern_ids
 
-def matcher_bo_entity(entity_name):
+def matcher_bo_entity(entity_name,seed_aliases):
     '''
     if the entity name is already present in the learned_patterns, it gets the exact pattern. Then checks if it is present in the current_patterns.
     if present then just returns the exact pattern. If not, then finds the closest pattern in current_pattern.
@@ -311,7 +311,6 @@ def matcher_bo_entity(entity_name):
 
     pre_learned_patterns=[]
     pre_learned_masks=[]
-    seed_aliases=[]
     exact_pattern_ids=[]
     exact_masks = {}
     close_pattern_ids=[]
@@ -320,8 +319,8 @@ def matcher_bo_entity(entity_name):
 
     # check if the any patterns for the entity have already been identified
     if entity_name in list(learned_patterns['entity_name']):
-        seed_aliases=str(list(learned_patterns[learned_patterns['entity_name'] == entity_name]['seed_aliases'])[0])
-        seed_aliases=seed_aliases.split(',')
+        # seed_aliases=str(list(learned_patterns[learned_patterns['entity_name'] == entity_name]['seed_aliases'])[0])
+        # seed_aliases=seed_aliases.split(',')
         pattern_ids=str(list(learned_patterns[learned_patterns['entity_name'] == entity_name]['pattern_ids'])[0])
         if pattern_ids!='':
             pattern_ids=ast.literal_eval(pattern_ids)
@@ -650,9 +649,8 @@ def create_patterns_per_doc(parsed_text):
     for pattern in aggregated_pattern_instance_mapping.keys():
         if pattern in filtered_patterns:
             pattern_id=getID()
-            #
             current_patterns=current_patterns.append({'pattern_id':pattern_id,'base_pattern':str(pattern),'instances':str(aggregated_pattern_instance_mapping[pattern]),
-                                 'page_numbers':aggregated_pattern_pagenumber_mapping[pattern],'instances_orders':str(aggregated_pattern_order_mapping[pattern]),'hpattern':str(base_pattern_to_hpattern[pattern]),'document_name':current_document,'num_instances':counted_patterns[pattern]}, ignore_index=True)
+                                 'page_numbers':str(aggregated_pattern_pagenumber_mapping[pattern]),'instances_orders':str(aggregated_pattern_order_mapping[pattern]),'hpattern':str(base_pattern_to_hpattern[pattern]),'document_name':current_document,'num_instances':str(counted_patterns[pattern])}, ignore_index=True)
 
 
 
@@ -704,7 +702,7 @@ def init(file_path, fresh=False):
     units = ['ft', 'gal', 'ppa', 'psi', 'lbs', 'lb', 'bpm', 'bbls', 'bbl', '\'', "\"", "'", "°", "$", 'hrs']
     punc = set(string.punctuation)
     if_seen_document_before=False
-    threshold = 10
+    threshold = 6
     # save state across documents
     if os.path.exists('counter'):
         counter=loadmodel('counter')
@@ -757,6 +755,7 @@ def init(file_path, fresh=False):
 
         all_patterns = pd.concat([all_patterns, current_patterns])
 
+
 def close():
     '''
 
@@ -770,8 +769,8 @@ def close():
     # all_patterns=pd.concat([all_patterns, current_patterns]) # done in init() now
     # all_patterns.to_csv('all_patterns.csv')
     savemodel(counter,'counter')
-    build_report_pagewise()
-    # build_report_w_smart_align()
+    # build_report_pagewise()
+    build_report_w_smart_align()
     # todo: add the finding of 'interesting' patterns
 
 
@@ -846,7 +845,7 @@ def build_report_pagewise():
             agg_dict[column] = agg_func
     report =report.groupby(['page number', 'document name'],as_index=False).agg(agg_dict)
     report=report.sort_values(by=['document name','page number'])
-    report.to_csv('report.csv')
+    report.to_csv('report_pagewise.csv')
 
 def build_report_w_smart_align():
 
@@ -858,6 +857,7 @@ def build_report_w_smart_align():
     all_patterns['entity_name'] = pd.Series(np.random.randn(len(all_patterns)), index=all_patterns.index)
     # print(all_patterns['entity_name'])
 
+    # adding the learned entity_names to the respective rows/patterns in all_patterns
     all_pattern_ids = []
     print(learned_patterns)
     for index, row in learned_patterns.iterrows():
@@ -870,35 +870,59 @@ def build_report_w_smart_align():
     all_patterns = all_patterns[all_patterns['pattern_id'].isin(all_pattern_ids)]
     all_patterns = all_patterns.reset_index(drop=True)
 
-    entities = set(all_patterns['entity_name'])
-    series = pd.DataFrame()
 
-    for entity in entities:
-        instances_orders = ast.literal_eval(
-            str(list(all_patterns[all_patterns['entity_name'] == entity]['instances_orders'])[0]))
-        instances = ast.literal_eval(str(list(all_patterns[all_patterns['entity_name'] == entity]['instances'])[0]))
-        entity_names = [entity] * len(instances)
-        df = pd.DataFrame(
-            data={"instances_orders": instances_orders, "instances": instances, "entity_name": entity_names})
-        series = pd.concat([series, df])
 
-    series = series.sort_values(by=['instances_orders'])
-    series = series.reset_index(drop=True)
-    print(list(series['entity_name']))
-    records, indices = rec_separate(list(series['entity_name']), stage_name)
-    print(records, indices)
 
-    separated_records = pd.DataFrame(columns=list(entities))
+    # do for each document:
 
-    for record_index in indices:
-        tempdict = {}
-        for index in record_index:
-            entity_name = series.loc[index]['entity_name']
-            instances = series.loc[index]['instances']
-            tempdict[entity_name] = instances
-        separated_records = separated_records.append(tempdict, ignore_index=True)
 
-    separated_records.to_csv('report.csv')
+    # create a data frame of instances as rows to work on for record separation
+
+    final_record=pd.DataFrame()
+    for document_name in all_patterns['document_name'].unique():
+        all_patterns_doc=all_patterns[all_patterns['document_name']==document_name]
+        entities = set(all_patterns_doc['entity_name'])
+
+        series = pd.DataFrame()
+
+        for entity in entities:
+            instances_orders = ast.literal_eval(str(list(all_patterns_doc[all_patterns_doc['entity_name'] == entity]['instances_orders'])[0]))
+            instances = ast.literal_eval(str(list(all_patterns_doc[all_patterns_doc['entity_name'] == entity]['instances'])[0]))
+            hpattern=ast.literal_eval(str(list(all_patterns_doc[all_patterns_doc['entity_name'] == entity]['hpattern'])[0]))
+            mask = ast.literal_eval(
+                str(list(all_patterns_doc[all_patterns_doc['entity_name'] == entity]['mask'])[0]))
+            entity_names = [entity] * len(instances)
+            hpattern=[hpattern] * len(instances)
+            mask = [mask] * len(instances)
+            df = pd.DataFrame(
+                data={"instances_orders": instances_orders, "instances": instances, "entity_name": entity_names,"hpattern":hpattern, "mask":mask})
+            series = pd.concat([series, df])
+
+        series = series.sort_values(by=['instances_orders'])
+        series = series.reset_index(drop=True)
+        # print(list(series['entity_name']))
+        records, indices = rec_separate(list(series['entity_name']), stage_name)
+        # print(records, indices)
+
+        separated_records = pd.DataFrame(columns=list(entities)+['document_name'])
+
+        # iterate over each record: list of list (indices in the same report)
+        for record_index in indices:
+            tempdict = {}
+            # fills one row in the record
+            for index in record_index:
+                entity_name = series.loc[index]['entity_name']
+                instance = series.loc[index]['instances']
+                hpattern = series.loc[index]['hpattern']
+                # print('hpattern',hpattern)
+                mask=series.loc[index]['mask']
+                tempdict[entity_name] = ' '.join(find_values(instance,hpattern,mask=mask))
+            tempdict['document_name']=document_name
+            separated_records = separated_records.append(tempdict, ignore_index=True)
+
+        final_record=pd.concat([final_record, separated_records])
+    final_record.reset_index(inplace=True,drop=True)
+    final_record.to_csv('report_smart_align.csv')
 
 # ==================================== CLI : command line functions
 
@@ -941,7 +965,7 @@ def update_learn_pattern(entity_name, pattern_id, mask):
     current_patterns.to_csv('current_patterns.csv')
     all_patterns.to_csv('all_patterns.csv')
 
-def interact_for_single_entity(entity_name, strict=False, auto_skip=False):
+def interact_for_single_entity(entity_name, aliases, strict=False, auto_skip=False):
     '''
     1. look for exact/similar entities
     2. if strict is True and exact found, then update the learned
@@ -954,7 +978,7 @@ def interact_for_single_entity(entity_name, strict=False, auto_skip=False):
     '''
 
     result_rows = pd.DataFrame(columns=['instances', 'pattern_ids', 'hpattern'])
-    exact_pattern_ids, close_pattern_ids, far_pattern_ids, exact_masks = matcher_bo_entity(entity_name)
+    exact_pattern_ids, close_pattern_ids, far_pattern_ids, exact_masks = matcher_bo_entity(entity_name,aliases)
 
     if len(exact_pattern_ids) != 0:
         result_rows = get_rows_from_ids(exact_pattern_ids)
@@ -975,13 +999,15 @@ def interact_for_single_entity(entity_name, strict=False, auto_skip=False):
                 mask=exact_masks[pattern_id]
                 update_learn_pattern(entity_name, pattern_id, mask)
 
-    else:
-        if auto_skip==True and len(exact_pattern_ids)!=0:
-            for _, row in result_rows.iterrows():
-                pattern_id = row['pattern_id']
-                mask = exact_masks[pattern_id]
-                update_learn_pattern(entity_name, pattern_id, mask)
             return
+    else:
+        if auto_skip==True:
+            if len(exact_pattern_ids)!=0:
+                for _, row in result_rows.iterrows():
+                    pattern_id = row['pattern_id']
+                    mask = exact_masks[pattern_id]
+                    update_learn_pattern(entity_name, pattern_id, mask)
+                return
 
         output = ''
         count = 0
@@ -1043,7 +1069,8 @@ def interact_for_single_entity(entity_name, strict=False, auto_skip=False):
 
         update_learn_pattern(entity_name, id_map[int(selected_pattern_id)], mask)
 
-def single_doc_cli(file_path, list_of_entity_names=[], strict=False, auto_skip=False):
+
+def single_doc_cli(file_path, list_of_entity_names=[], aliases={}, strict=False, auto_skip=False):
     '''
     controls the flow of the CLI
     :param file_path:
@@ -1058,13 +1085,13 @@ def single_doc_cli(file_path, list_of_entity_names=[], strict=False, auto_skip=F
     if len(list_of_entity_names)>0:
          for entity_name in list_of_entity_names:
             print('Processing the entity: '+entity_name)
-            interact_for_single_entity(entity_name, strict=strict, auto_skip=auto_skip)
+            interact_for_single_entity(entity_name, aliases[entity_name], strict=strict, auto_skip=auto_skip)
          close()
     else:
         continue_cli = True
         while continue_cli:
             entity_name = input('Enter the entity you\'d like to search:')
-            interact_for_single_entity(entity_name)
+            interact_for_single_entity(entity_name, aliases[entity_name])
             decision=input('Do you want to continue searching: y or n')
             if decision=='n':
                 continue_cli=False
@@ -1072,7 +1099,7 @@ def single_doc_cli(file_path, list_of_entity_names=[], strict=False, auto_skip=F
 
 @click.command()
 @click.argument('path')
-@click.option('--i/--no-i', default=True, help='choose --i for interactive')
+@click.option('--i/--no-i', default=False, help='choose --i for interactive')
 @click.option('--a/--no-a', default=False, help='choose --a to auto skip exact patterns when in interactive mode. False by default.')
 @click.option('--f/--no-f', default=False, help='choose --f to start fresh (all previous learning will be removed)')
 @click.option('--e', help='give the path to the list of entities. One entity per line.')
@@ -1090,9 +1117,12 @@ def cli(path, i, a, f, e):
 
     if e!=None:
         list_of_entity_names=open(e,'r').readlines()
-        list_of_entity_names=[name.strip() for name in list_of_entity_names]
+        # list_of_entity_names=[name.strip() for name in list_of_entity_names]
+        aliases={line.split('=')[0].strip():line.split('=')[1].strip().split(',') for line in list_of_entity_names}
+        list_of_entity_names=aliases.keys()
     else:
         list_of_entity_names=[]
+        aliases={}
 
     import os
     if os.path.isdir(path):
@@ -1100,9 +1130,9 @@ def cli(path, i, a, f, e):
             for file in files:
                 if file=='.DS_Store':
                     continue
-                single_doc_cli(os.path.join(root, file), list_of_entity_names, strict, a)
+                single_doc_cli(os.path.join(root, file), list_of_entity_names,aliases, strict, a)
     elif os.path.isfile(path):
-        single_doc_cli(path, list_of_entity_names, strict, a)
+        single_doc_cli(path, list_of_entity_names, aliases,strict, a)
 
 
 # ============================================== begin the CLI
@@ -1128,18 +1158,22 @@ cli()
 
 # ====================================================== TODOS
 
-# 19. record separation: do for multi documents
-# 20. record separation: make sure 'stage' is used as an entity!!
+# 20. record separation: for now make sure 'stage' is used as an entity!!
+# 21. simplify the process of providing aliases of the entities
+# 22. the user should put the stage enabler entity as the first entity in the entity-list.
+#       A better way to provide the aliases. Maybe in the entity-list file.
+#       - or - with each entity give an option to search by aliases.
+# 24. Auto detect missing entities and poke the user with the closest looking pattern for that entity in that range.
 
-# 9. do the interesting patterns
+# 9.  do the interesting patterns
 # 11. add more documentation of functions
 # 12. add more logs
 # 13. add an option to select all tokens
 # 14. make it pip installable
 # 16. put a command line flag for just reports
 # 17. when suggesting tokens to users, get rid of the punctuations (all punctuation within two selected things will be automatically true)
-# 2. island the numbers together when outputting to the report (update the function find_values) : 80 . 6
-# 4. instances to the user are not getting ranked (for later)
+# 2.  island the numbers together when outputting to the report (update the function find_values) : 80 . 6
+# 4.  instances to the user are not getting ranked (for later)
 # 18. because ATP : 80 .6 is a different pattern than ATP : 80 for the code,
 #       these two similar instances are not getting captured as part of the same pattern!! resulting in missing values in the report.
 #       This will also occur for instances split arbitrarily due to the new line.
