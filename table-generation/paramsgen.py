@@ -3,9 +3,9 @@
 import os
 import csv
 
-params = ['font families', 'font styles', 'font weights', 'font variants', 'font sizes', 'table widths', 'table heights', 
-'table paddings', 'border collapses', 'border thicknesses', 'border types', 'border colours', 'border bottoms', 'horizontal text alignments', 
-'vertical text alignments', 'character distributions']
+params = ['font-family', 'font-style', 'font-weight', 'font-variant', 'font-size', 'width', 'height', 
+'padding', 'border-collapses', 'border thickness', 'border type', 'border color', 'border-bottom', 'text-align', 
+'vertical-align', 'character distribution']
 
 font_families = ['Georgia, serif', '"Palatino Linotype", "Book Antiqua", Palatino, serif', '"Times New Roman", Times, serif', 
 'Arial, Helvetica, sans-serif', '"Arial Black", Gadget, sans-serif', '"Comic Sans MS", cursive, sans-serif', 'Impact, Charcoal, sans-serif',
@@ -42,7 +42,7 @@ def main():
 	border_thickness, border_type, border_colour, border_bottom, text_horiz_align, text_vertic_align, character_distr]
 
 	for i in range(len(params)):
-		var = input("Please enter percentage (in decimal) for each of the " + str(len(all_params[i])) + " " + str(params[i]) + " seperated by a comma (e.g. 0.7,0.3)\n" + str(all_params[i]) + "\n")
+		var = input("Please enter percentage (in decimal) for each " + str(params[i]) + " seperated by a comma (e.g. 0.7,0.3)\n" + str(all_params[i]) + "\n")
 		list_of_probs = var.split(',')
 		all_params[i].insert(0, params[i])
 		list_of_probs.insert(0, '')

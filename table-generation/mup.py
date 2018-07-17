@@ -134,13 +134,16 @@ def generate_html():
     Generates the HTML and calls further methods
     """
     bounding_boxes_ = []
+    list_of_words = read_words('../pdf-parser/text_for_tables.txt')
     for x in os.listdir("./CSS"):
         page = mp.page()
         page.init(title="HTML Generator",
                   css=('../CSS/' + str(x)))
+        text = page.pre("HEEEEEELLLLLOOOOOOO")
+
         page.table()
 
-        list_of_words = read_words('../pdf-parser/text_for_tables.txt')
+        # list_of_words = read_words('../pdf-parser/text_for_tables.txt')
 
         for i in range(10): #rows
             page.tr()

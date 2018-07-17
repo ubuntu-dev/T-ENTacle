@@ -5,6 +5,8 @@ import json
 import csv
 
 parameters = {}
+# {'font-family': {'Georgia, serif': '0.02', '"Palatino Linotype", "Book Antiqua", Palatino, serif': '0.02', '"Times New Roman", Times, serif': '0.8', 'Arial, Helvetica, sans-serif': '0.06', '"Arial Black", Gadget, sans-serif': '0.05', '"Comic Sans MS", cursive, sans-serif': '0', 'Impact, Charcoal, sans-serif': '0', '"Lucida Sans Unicode", "Lucida Grande", sans-serif': '0', 'Tahoma, Geneva, sans-serif': '0.01', '"Trebuchet MS", Helvetica, sans-serif': '0', 'Verdana, Geneva, sans-serif': '0.01', '"Courier New", Courier, monospace': '0.03', '"Lucida Console", Monaco, monospace': '0'}, 'font-style': {'normal': '0.9', 'italic': '0.08', 'oblique': '0.02'}, 'font-weight': {'normal': '0.9', 'bold': '0.1'}, 'font-variant': {'normal': '0.85', 'small-caps': '0.15'}, 'font-size': {'8px': '0.1', '10px': '0.3', '12px': '0.2', '14px': '0.1', '16px': '0.1', '18px': '0.1', '20px': '0.1', '22px': '0', '24px': '0', '26px': '0'}, 'width': {'100%': '0.7', '75%': '0.2', '50%': '0.1'}, 'height': {'100px': '0.05', '500px': '0.15', '1000px': '0.2', '1500px': '0.2', '2000px': '0.3', '2500px': '0.1', '3000px': '0', '4000px': '0', '5000px': '0'}, 'padding': {'5px': '0.6', '10px': '0.2', '15px': '0.1', '20px': '0.1'}, 'border-collapses': {'yes': '0.3', 'no': '0.7'}, 'border thickness': {'1px': '0.7', '2px': '0.2', '3px': '0.1', '4px': '0'}, 'border type': {'solid': '0.95', 'dotted': '0.05'}, 'border color': {'black': '0.9', 'blue': '0.1', 'red': '0'}, 'border-bottoms': {'yes': '0.2', 'no': '0.8'}, 'text-align': {'left': '0.4', 'right': '0.4', 'center': '0.2'}, 'vertical-align': {'top': '0.4', 'bottom': '0.4', 'middle': '0.2'}, 'character distributions': {'words': '0.5', 'numbers': '0.4', 'symbols': '0.1'}}
+num_of_tables = 436700160
 
 def build_json(index, lth, lty, lclr):
     """
@@ -68,44 +70,74 @@ def load_params():
             counter_2 = counter_2 + 1
 
 
+# def param_distr(numbers):
+
+
 def main():
     """
     Performs CSS and JSON generation
     """
-    # line_type = ['dotted', 'solid']
-    # line_color = ['blue', 'red', 'black', 'cyan']
-    # line_thickness = ['1px', '2px', '3px']
-
-    data = {}
-    data['tables'] = []
-
-    for j, combo in enumerate(itertools.product(line_thickness, line_type, line_color)):
-        css = "table, th, td, tr {\n" \
-              "\tborder: "
-        params = []
-        for i, x in enumerate(combo):
-            params.append(x)
-            css += x
-            css += ' '
-
-        css += '; \n' \
-               '}'
-
-        print(j, css)
-        filename = str(j) + ".css"
-
-        fw = open("./CSS/"+str(filename), "w+")
-        fw.write(str(css))
+    cn = 0
+    border = False
+    css_param_counter = 0 
+    numbers_th = []
+    numbers_st = []
+    numbers_cl = []
+    thickness = []
+    style = []
+    clr = []
+    for par in parameters:
+        css = ''
+        css_param_counter += 1
+        if css_param_counter == 16:
+            continue
+        if 'border ' in par:
+            border = True
+            for pr in parameters[par]:
+                cn += 1
+                if cn <= 4:
+                    thickness.append(pr)
+                    numbers_th.append(int(num_of_tables * float(parameters[par][pr])))
+                if cn > 4 and cn <= 6:
+                    style.append(pr)
+                    numbers_st.append(int(num_of_tables * float(parameters[par][pr])))
+                if cn > 6 and cn <= 9:
+                    clr.append(pr)
+                    numbers_cl.append(int(num_of_tables * float(parameters[par][pr])))
+        else:
+            css += str(par)
+        css += '}\n'
+    css_arr = []
+    for th in range(4):
+        for i in range(numbers_th[th]):
+            css_arr.append("table, th, td, tr {\n\tborder: " + thickness[th] + " ")
+    j = 0
+    for s in range(2):
+        while j < numbers_st[s]:
+            css_arr[j] += style[s] + " "
+            j += 1
+    k = 0
+    for c in range(3):
+        while k < numbers_cl[c]:
+            css_arr[k] += clr[c] + ";"
+            k += 1
+    for el in range(len(css_arr)):
+        css_arr[el] += "\n}\n"
+    filecount = 0
+    for v in css_arr:
+        filename = str(filecount) + ".css"
+        fw = open("./CSS_test/"+str(filename), "w+")
+        fw.write(str(v))
+        filecount += 1
         fw.close()
 
-        lth = params[0]
-        lty = params[1]
-        lclr = params[2]
-        table_str_json = build_json(j, lth, lty, lclr)
-        with open('./JSON/' + str(j) + '_str.json', 'w') as outfile:
-            json.dump(table_str_json, outfile)
+
+    #     table_str_json = build_json(j, lth, lty, lclr)
+    #     with open('./JSON/' + str(j) + '_str.json', 'w') as outfile:
+    #         json.dump(table_str_json, outfile)
 
 
-#main()
+
 load_params()
-print(parameters)
+
+main()
