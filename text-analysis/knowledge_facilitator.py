@@ -5,12 +5,13 @@ from KE_interface import Interface
 
 @click.command()
 @click.argument('path')
-@click.option('--i/--no-i', default=True, help='choose --i for interactive')
+@click.option('--i/--no-i', default=False, help='choose --i for interactive')
 @click.option('--a/--no-a', default=False,
               help='choose --a to auto skip exact patterns when in interactive mode. False by default.')
 @click.option('--f/--no-f', default=False,
               help='choose --f to start fresh (all previous learning will be removed)')
 @click.option('--e', help='give the path to the list of entities. One entity per line.')
+#@click.option('--aliases', default=None, help='path to entity aliases. Comma separated per line')
 def cli(path, i, a, f, e=''):
     '''
         The main function that drives the command line interface

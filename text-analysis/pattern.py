@@ -280,11 +280,12 @@ class Pattern(object):
                 else:
                     as_num.append(locale.atof(number))
             except ValueError:
-                print(ValueError)
-                print(self.hpattern)
-                print("index " + str(i))
-                print(instance)
-                print(number)
+                pass
+                # print(ValueError)
+                # print(self.hpattern)
+                # print("index " + str(i))
+                # print(instance)
+                # print(number)
         return as_num
 
     def convert_to_num(self, instances):

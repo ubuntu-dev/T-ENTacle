@@ -18,25 +18,31 @@ import ast
 class Interface:
     def __init__(self, seed_path):
         #set object vars
-        self.entity_seeds = self.set_entity_seeds(seed_path)
+        self.entity_seeds = []
+        self.aliases = {}
+        self.set_entity_seeds(seed_path)
         self.knowledge_extractor = KnowledgeExtractor()
 
     def set_entity_seeds(self, seed_path):
         """
         TODO add file validation with try except block
-        Sets the entity seeds in the file seed_path.
+        Sets the entity seeds in the file seed_path and any given aliases.
         :param seed_path: string.
         :return:
         """
-        print("trying to set entity seeds")
+        print("Setting entity seeds")
         if seed_path:
             with open(seed_path, "r") as f:
                 seeds = f.readlines()
-                entity_seeds = [name.strip() for name in seeds if name]
+            seeds = [line.split(",") for line in seeds]
+            self.entity_seeds = [line[0].strip() for line in seeds if line]
+            for line in seeds:
+                try:
+                    self.aliases[line[0].strip()] = [item.strip() for item in line[1:]]
+                except IndexError:
+                    self.aliases[line[0].strip()] = []
         else:
             print("no entity seeds were passed")
-            entity_seeds = []
-        return entity_seeds
 
 
     def get_user_selection(self, entity_name, patterns, select_mask=True):
@@ -73,7 +79,7 @@ class Interface:
         patterns_to_keep = [patterns[int(i)] for i in pattern_selection if i]
 
         for p in patterns_to_keep:
-            print("You chose "+ " ".join(p.instances[0]))
+            print("You chose " + " ".join(p.instances[0]))
             print("The value of select mask is ", select_mask)
             if select_mask:
             # for each pattern that the user selected, allow them to select the appropriate tokens (the mask).
@@ -103,7 +109,7 @@ class Interface:
                         except ValueError:
                             print("I didn't understand your input. Please try again.")
 
-            self.knowledge_extractor.update_learned_patterns(entity_name, p)
+            self.knowledge_extractor.update_learned_patterns(entity_name, p, self.aliases)
         return None
 
     def get_value_from_user(self):
@@ -126,7 +132,8 @@ class Interface:
         :return:
         '''
         #first check if we have already learned the entity or something similar to it
-        exact_patterns, close_patterns, far_patterns = self.knowledge_extractor.matcher_bo_entity(entity_name)
+        exact_patterns, close_patterns, far_patterns = self.knowledge_extractor.matcher_bo_entity(entity_name,
+                                                                                                  self.aliases[entity_name])
         print("far patterns")
         for p in far_patterns:
             print(p.base_pattern)
@@ -141,24 +148,22 @@ class Interface:
             else:
                 print("Adding exact matches")
                 #only add exact matches
-                self.knowledge_extractor.update_learned_patterns(entity_name, exact_patterns)
+                self.knowledge_extractor.update_learned_patterns(entity_name, exact_patterns, self.aliases)
 
         else:
-            print("interactive mode")
             selection = None
             if auto_skip == True and len(exact_patterns) != 0:
                 # don't bother the user for exact matches, just save
-                print("auto skip is on")
                 print("Found exact pattern")
-                self.knowledge_extractor.update_learned_patterns(entity_name, exact_patterns)
+                self.knowledge_extractor.update_learned_patterns(entity_name, exact_patterns, self.aliases)
             #get user input if we found close or far matches
-            elif len(close_patterns) != 0:
-                print("Found close patterns")
+            elif len(close_patterns) != 0 or len(far_patterns) !=0 :
+                print("Found similar patterns")
                 #TODO should this be true?
-                selection = self.get_user_selection(entity_name, close_patterns, False)
-            elif len(far_patterns) != 0:
-                print("Found far patterns")
-                selection = self.get_user_selection(entity_name, far_patterns, True)
+                selection = self.get_user_selection(entity_name, close_patterns+far_patterns, True)
+            # elif len(far_patterns) != 0:
+            #     print("Found far patterns")
+            #     selection = self.get_user_selection(entity_name, far_patterns, True)
 
             else:
                 print("I couldn't find anything that matched the entity. ")
@@ -169,6 +174,7 @@ class Interface:
                 return
             if selection == "v" or selection == "V":
                 #TODO right now, only searches for nums, maybe we want to allow to search by date etc
+                #TODO this feature doesn't seem to work
                 value = self.get_value_from_user()
                 try:
                     value_as_float = locale.atof(value)
@@ -191,6 +197,7 @@ class Interface:
 
         #maybe os dependent TODO change to some other way of getting doc name from file path
         doc_name = file_path.split("/")[-1]
+        print("Processing document ", doc_name)
         #parse the document for text with tika
         parsed_text = utils.parse_document(file_path)
 

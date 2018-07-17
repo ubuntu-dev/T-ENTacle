@@ -3,14 +3,15 @@ import itertools
 from collections import Counter
 import copy
 from nltk import ngrams
+from knowledge_facilitator import cli
 
-KE = KnowledgeExtractor()
-
-line = ["ATP : 23 psi", "Avg press: 60 psi",
-        "ATP: 80 psi", "MTP: 70 psi"]
-
-# print(KE.break_natural_boundaries("ATP: 25.6 psi"))
-KE.create_patterns_per_doc(line, "garbage")
+# KE = KnowledgeExtractor()
+#
+# line = ["ATP : 23 psi", "Avg press: 60 psi",
+#         "ATP: 80 psi", "MTP: 70 psi"]
+#
+# # print(KE.break_natural_boundaries("ATP: 25.6 psi"))
+# KE.create_patterns_per_doc(line, "garbage")
 
 
 # def remove_subpatterns(counted_patterns):
@@ -34,3 +35,6 @@ KE.create_patterns_per_doc(line, "garbage")
 # pat_counts = Counter(line)
 # print(pat_counts)
 # remove_subpatterns(pat_counts)
+#python knowledge_facilitator.py --i --f --e entity_name.txt /Users/akdidier/Documents/Drilling-Grant/pdfs/Anadarko/AVALANCHE_29-40_UNIT_1H_Completion_Reports.pdf
+
+cli("/Users/akdidier/Documents/Drilling-Grant/pdfs/Anadarko/AVALANCHE_29-40_UNIT_1H_Completion_Reports.pdf", True, False, True, "entity_name.txt")

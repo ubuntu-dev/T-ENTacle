@@ -1,2 +1,11 @@
-Max Pressure
-Max rate
+stage number, stg, STG #, frac stage, plug and perf stage 
+ISIP (psi), Instantaneous Shut In Pressure	
+Total 100mesh (lbs),100 mesh, 100mesh, 100 M, 100 mesh white 
+avg treating pressure (psi),ATP, avg press, AP		
+max prop conc (ppa),Prop conc, prop ppa, prop ppg	
+max treating pressure (psi), MTP, MP, max press	
+pump rate avg (bpm),Average treating rate, Average Pump Rate, ATR, APR, AR, avg rate	
+pump rate max (bpm),Max Treating Rate, Max pump rate, MTR, MPR, MR, max rate
+Total vol slick water gal, SW		
+total fluid (gal),Total clean fluid, total bbls	
+total proppant (lbs), total prop

@@ -357,6 +357,7 @@ class KnowledgeExtractor(object):
         :param doc_name: string, optional. The name of the document being parsed.
         :return: None
         '''
+        print("Generating patterns.")
         #check for expected input
         if isinstance(parsed_text, str):
             parsed_text = [parsed_text]
@@ -372,9 +373,11 @@ class KnowledgeExtractor(object):
             for line in page.split('\n'):  # pattern analysis is done based on each line
                 if not line:
                     continue
-                # create chunks by dividing on commas+space, period+space (and multi-space??)
+                # create chunks by dividing on commas+space,
+                # EDIT: period+space (and multi-space??) was causing some patterns with abbreviations to be missed.
+                #       This is removed in favor of line endings
                 # so that patterns don't span beyond them
-                chunks = re.split(',\s{1,5}|\.\s{1,5}|;', line.lower())
+                chunks = re.split(',\s{1,5}|\n|;', line.lower())
                 #uncomment this line to use the non-spacy version of tokenizing
                 #chunks = [re.sub(r"([^a-zA-Z0-9])", r" \1 ", chunk.replace(",", "")) for chunk in chunks]
 
@@ -417,7 +420,7 @@ class KnowledgeExtractor(object):
         #merge patterns with all the other patterns. If we have seen the same patterns before, they should just
         #be added based on their base_pattern
         self.add_curr_to_all_patterns()
-        self.save(self.all_patterns)
+        self.save_all_patterns()
         #self.all_patterns = pd.concat([self.current_patterns, self.all_patterns])
 
     def save_all_patterns(self):
@@ -462,6 +465,7 @@ class KnowledgeExtractor(object):
 
     def find_close_patterns(self, base_pattern):
         '''
+        TODO needs to check aliases
         Finds the hpattern in current_patterns that is closest to the hpattern that corresponds to the base_pattern.
         This is done by calculating the fuzzy distance between the entity name of the previously learned pattern
         and the entity name of all the patterns in current patterns. We also look for similar units. An overall
@@ -497,15 +501,15 @@ class KnowledgeExtractor(object):
             #score entity confidence by how many of the entity groups are close
             for p_ent in p_entities:
                 for ent in entities:
-                    print("Checking the entity " + p_ent + " against the learned entity " + ent)
-                    print(fuzz.ratio(p_ent, ent))
+                    #print("Checking the entity " + p_ent + " against the learned entity " + ent)
+                    #print(fuzz.ratio(p_ent, ent))
                     if fuzz.ratio(p_ent, ent) > 70:
                         confidence_flag_entity += 1  # !Note: this is changed from the original code from a binary to a count. TODO: discuss with Asitang
 
             #score unit confidence by exact match
             for p_unit in p_units:
                 for u in units:
-                    print("Checking the unit " + p_unit + " against the learned unit " + u)
+                    #print("Checking the unit " + p_unit + " against the learned unit " + u)
                     if p_unit.lower() == u.lower(): #TODO make this more robust by using the GROBID json. Multiple representations can mean the same thing, like m and meter
                         confidence_flag_unit += .5 #weight a unit match less heavily than an entity match. #TODO evaluate different weights
 
@@ -518,7 +522,7 @@ class KnowledgeExtractor(object):
 
         return close_patterns
 
-    def find_far_patterns(self, entity_name, aliases = []):
+    def find_far_patterns(self, entity_name, aliases):
         """
 
         :param entity_name: string. The entity we want to find in the current document
@@ -526,18 +530,21 @@ class KnowledgeExtractor(object):
         :return:
         """
         aliases.append(entity_name)
+        #print("aliases inside far patterns ", aliases)
         far_patterns = {}
-        for k, p in self.curr_patterns.items():
-            entities = p.find_entities()
-            for entity in entities:
-                for alias in aliases:
-                    score = fuzz.ratio(alias.lower(), entity)
+        for alias in aliases:
+           # print("finding patterns close to alias ", alias)
+            for k, p in self.curr_patterns.items():
+                entities = p.find_entities()
+                for entity in entities:
+                    score = fuzz.ratio(alias.lower(), entity.lower())
+                    #print("alias and entity %s %s %d"  % (alias.lower(), entity.lower(), score))
                     if score > 50:
                         far_patterns[p] = score
         return far_patterns
 
 
-    def matcher_bo_entity(self, entity_name):
+    def matcher_bo_entity(self, entity_name, seed_aliases):
         '''
         When a new entity is processed, this function checks whether the entity has already
         been learned.
@@ -553,15 +560,13 @@ class KnowledgeExtractor(object):
         :param entity_name: string. The entity name to check if it has already been learned
         :return:
         '''
-        seed_aliases = []
         exact_patterns = []
         close_patterns = []
         far_patterns = []
-
+        #print(seed_aliases)
         # check if the any patterns for the entity have already been learned
         # TODO should we check in the seed aliases too?
         if entity_name in self.learned_patterns.keys():
-            seed_aliases = self.learned_patterns[entity_name]["seed_aliases"]
             #get all the base_patterns we have already learned for the entity
             pre_learned_bpatterns = self.learned_patterns[entity_name]["base_patterns"]
             if pre_learned_bpatterns:
@@ -577,7 +582,7 @@ class KnowledgeExtractor(object):
                     #look for patterns in the current document that are similar to the previously learned patterns
                     #TODO: what if there is an exact match and a close match? Could there be more than one representation?
                     print('No exact match found. Finding patterns in this document close to the learned patterns ...')
-                    print(pre_learned_bpatterns)
+                    #print(pre_learned_bpatterns)
                     close_pats = list(map(self.find_close_patterns, pre_learned_bpatterns))
                     #close_patterns is a list of dictionaries. Key pattern, value confidence.
                     #  First aggregate keys into one big dictionary
@@ -594,11 +599,14 @@ class KnowledgeExtractor(object):
 
         #if we haven't learned anything about this entity, check for patterns in the current document that are similar
         #to the entity name and seed_aliases
-        else:
-            print("This entity hasn't been learned yet. Looking for patterns that are similar to the entity name.")
-            far_p = self.find_far_patterns(entity_name, seed_aliases)
-            far_p = sorted(far_p.items(), key=lambda x: x[1], reverse = True)
-            far_patterns = [tup[0] for tup in far_p]
+        #else:
+        print("This entity hasn't been learned yet. Looking for patterns that are similar to the entity name.")
+        print("Aliases before passing to far patterns ", seed_aliases)
+        far_p = self.find_far_patterns(entity_name, seed_aliases)
+        far_p = sorted(far_p.items(), key=lambda x: x[1], reverse = True)
+        far_patterns = [tup[0] for tup in far_p]
+        if len(far_patterns) > 30:
+            far_patterns = far_patterns[0:30]
 
         return exact_patterns, close_patterns, far_patterns
 
@@ -615,24 +623,31 @@ class KnowledgeExtractor(object):
         return found_patterns
 
 
-    def update_learned_patterns(self, entity_name, patterns):
+    def update_learned_patterns(self, entity_name, patterns, aliases):
         """
         Adds the base_pattern of pattern to the learned patterns for the entity, entity_name
         :param entity_name: string
         :param pattern: pattern object or list of pattern objects
+        :param aliases: dict. Each key is an entity name, values are lists of aliases for the entity.
         :return:
         """
         if isinstance(patterns, Pattern):
             patterns = [patterns]
 
         for pattern in patterns:
-            if entity_name in self.learned_patterns:
-                self.learned_patterns[entity_name]["base_patterns"].append(pattern.base_pattern)
-            else:
+            #add the pattern to the entity if its not already there
+            if entity_name not in self.learned_patterns:
                 self.learned_patterns[entity_name] = {}
-                self.learned_patterns[entity_name]["base_patterns"] = [pattern.base_pattern]
-                self.learned_patterns[entity_name]["seed_aliases"] = []
+                self.learned_patterns["seed_aliases"] = []
 
+            if pattern.base_pattern not in self.learned_patterns[entity_name]["base_patterns"]:
+                self.learned_patterns[entity_name]["base_patterns"].append(pattern.base_pattern)
+
+        #TODO decide how and if entity aliases should be saved.
+        for ent, als in aliases.items():
+            for alias in als:
+                if als not in self.learned_patterns[entity_name]["seed_aliases"]:
+                    self.learned_patterns[entity_name]["seed_aliases"].append(als)
         #save the model, in case of a crash or something
         self.save(self.learned_patterns)
 
@@ -662,9 +677,6 @@ class KnowledgeExtractor(object):
                 docs_and_pages[k] = list(set(docs_and_pages[k])) #TODO this is bad programming practice change this later
             report[entity_name] = entity_report
 
-        #convert weird nested dict to weird dataframe
-        # cols = list(self.learned_patterns.keys()) + ["Document"]
-        # df_report = pd.DataFrame(columns=cols)
 
         #add all the entities to a row of the dataframe page by page, document by document
         all_rows = []
@@ -672,11 +684,18 @@ class KnowledgeExtractor(object):
             for page in pages:
                 row = {"Document": doc}
                 for entity_name, d in report.items():
-                    value_list = d[doc][page]
-                    #convert the list of values to a string of line separated values
-                    value_str = "\n".join(value_list)
+                    #check if the document exists for this entity
+                    if not doc in d.keys():
+                        d[doc] = {}
+                    #check if anything was found on the page for this entity
+                    if page in d[doc].keys():
+                        value_list = d[doc][page]
+                        #convert the list of values to a string of line separated values
+                        value_str = "\n".join(value_list)
+                    else:
+                        value_str = ""
                     row[entity_name] = value_str
                 all_rows.append(row)
         df_report = pd.DataFrame(all_rows)
         #write to csv
-        df_report.to_csv("report.csv")
+        df_report.to_csv("report.csv", index=False)

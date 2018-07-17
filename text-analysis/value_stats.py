@@ -10,7 +10,7 @@ import collections
 from pandas.io.json import json_normalize
 
 # read csv files into a dataframe
-df_extracted = pd.read_csv('stats_correct.csv')
+df_extracted = pd.read_csv('report.csv')
 df_gt = pd.read_csv('CompletionsDataExtract.csv')
 
 # extract all unique rows in "Well Name" columns
@@ -50,7 +50,7 @@ for i in range(len(wellname_gt)):
     #since the lists are sorted, advance to the correct letter of the alphabet
     for j in range(len(wellname_extracted)):        
         try:
-            while wellname_extracted[j][0] < wellname_gt[i][0] and j < len(wellname_extracted):
+            while wellname_extracted[j][0] < wellname_gt[i][0] and j < len(wellname_extracted)-1:
                 j += 1
         except IndexError:
             print(IndexError)
@@ -97,7 +97,7 @@ def map_wells(original):
 
 df_extracted["Well Name Normalized"] = df_extracted["Well Name"].apply(lambda row: map_wells(row))
 
-# for each well, get list of nums
+# for each well, and each entity, get list of nums from the extracted data
 values = {well_name: {} for well_name in well_mapping.values()}
 #columns to iterate through
 cols = list(df_extracted.columns)
@@ -114,12 +114,19 @@ for well in well_mapping.values():
                 else:
                     temp = [item]
                 for num in temp:
-                    try: 
+                    try:
+                        num = num.replace(",", "")
                         num = float(num)
+                        if col == "Total  vol slickwater, gal" or col == "total fluid (gal)":
+                            num = num*42
+                            print("transformed num")
+                        if num not in values[well][col]:
+                            values[well][col].append(num)
                     except ValueError as e:
                         pass
-                    if num not in values[well][col]:
-                        values[well][col].append(num)
+for k,v in values.items():
+    print(k)
+    print(v)
 
 
 #calculate the precision and recall
@@ -132,10 +139,13 @@ for well in well_mapping.values():
     precision.append({"Well Name" : well})
     for col in cols:
         if col == "Operator":
-            recall[i]["Operator Name"] = values[well][col][0]
-            precision[i]["Operator Name"] = values[well][col][0]
+            recall[i]["Operator Name"] = 100
+            precision[i]["Operator Name"] = 100
         predicted = set(values[well][col])
-        true_col = set(df_gt[df_gt["Well Name"]==well][col].unique())
+        if col != "Operator":
+            true_col = set(df_gt[df_gt["Well Name"]==well][col].apply(pd.to_numeric).unique())
+        else:
+            true_col = set(df_gt[df_gt["Well Name"] == well][col].unique())
         tp = len(predicted.intersection(true_col))
         if true_col:
             recall[i][col] = tp/len(true_col)
