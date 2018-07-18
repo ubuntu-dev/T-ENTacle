@@ -229,19 +229,28 @@ class KnowledgeExtractor(object):
 
     def aggregate_patterns(self, patterns):
         """
-        Looks for patterns with the same base pattern and stores their instances together
+        Looks for patterns with the same base pattern and stores their instances together. This updates both
+         curr_patterns and all_patterns so that all previously found patterns get updated with the new instances.
+        found in the current document.
         :param patterns: list of pattern objects
         :return:
         """
-        aggregated = {}
+        # check if the key is in curr_patterns or all_patterns, if not merge the instances with the existing pattern object.
         for p in patterns:
-            if p.base_pattern not in aggregated.keys():
-                aggregated[p.base_pattern] = p
+            if p.base_pattern not in self.curr_patterns.keys():
+                self.curr_patterns[p.base_pattern] = p
             else:
-                aggregated[p.base_pattern].add(p.location)
-                aggregated[p.base_pattern].add_instance(p.instance)
-                aggregated[p.base_pattern].add_page_num(p.page_num)
-        return list(aggregated.values())
+                self.curr_patterns[p.base_pattern].add(p.location)
+                # self.curr_patterns[p.base_pattern].add_instance(p.instance)
+                # self.curr_patterns[p.base_pattern].add_page_num(p.page_num)
+
+            if p.base_pattern not in self.all_patterns.keys():
+                self.all_patterns[p.base_pattern] = p
+            else:
+                self.all_patterns[p.base_pattern].add(p.location)
+                # self.all_patterns[p.base_pattern].add_instance(p.instance)
+                # self.all_patterns[p.base_pattern].add_page_num(p.page_num)
+
 
     def significance_filter(self, row):
         '''
@@ -408,23 +417,19 @@ class KnowledgeExtractor(object):
         #TODO remove pruning and test
         pattern_subset = self.prune(filtered_patterns)
 
-        #group all of the pattern instances by their base_pattern
-        aggregated_patterns = self.aggregate_patterns(pattern_subset)
-
-        #keep dictionary of pattern objects
-        self.curr_patterns = {p.base_pattern: p for p in aggregated_patterns}
+        #group all of the pattern instances by their base_pattern, and update current and all patterns
+        self.aggregate_patterns(pattern_subset)
 
         #create a dataframe of all the patterns
-        self.current_patterns = pd.concat([self.current_patterns,
-                                           pd.DataFrame(list(map(lambda p: p.get_dict(), aggregated_patterns)))])
+        #TODO save in a json instead
+        # self.current_patterns = pd.concat([self.current_patterns,
+        #                                    pd.DataFrame(list(map(lambda p: p.get_dict(), aggregated_patterns)))])
+        #
+        # #save the patterns
+        # self.current_patterns = self.current_patterns.replace(np.nan, '', regex=True)
+        # self.current_patterns.to_csv('current_patterns.csv')
 
-        #save the patterns
-        self.current_patterns = self.current_patterns.replace(np.nan, '', regex=True)
-        self.current_patterns.to_csv('current_patterns.csv')
-
-        #merge patterns with all the other patterns. If we have seen the same patterns before, they should just
-        #be added based on their base_pattern
-        self.add_curr_to_all_patterns()
+        #save
         self.save_all_patterns()
         #self.all_patterns = pd.concat([self.current_patterns, self.all_patterns])
 
