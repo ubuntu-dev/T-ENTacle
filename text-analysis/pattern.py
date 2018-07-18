@@ -31,7 +31,7 @@ class Pattern(object):
     units = ['ft', 'gal', 'ppa', 'psi', 'lbs', 'lb', 'bpm', 'bbls', 'bbl', '\'', "\"", "'", "°", "$", 'hrs']
     locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
-    def __init__(self, tokens, page_num, doc_name, id):
+    def __init__(self, tokens, page_num, doc_name, position):
         self.instance = tokens #list of strings
         self.page_num = page_num
         self.hpattern = self._create_hpattern(self.instance)
@@ -39,8 +39,9 @@ class Pattern(object):
         self.instances = [tokens]
         self.page_nums = [page_num]
         self.doc_name = doc_name
-        self.id = id
-        self.location = {doc_name: {"page_num": [page_num], "instances": [tokens]}} #this could eventually be some sort of character position for grouping
+        #TODO add order, just the relative order that each instance has appeared. So instances and order will be the same length
+        #in KE class, aggregate locations by document
+        self.location = {doc_name: {"page_num": [page_num], "instances": [tokens], "order": [position]}} #this could eventually be some sort of character position for grouping
         self.mask = range(len(tokens))
         self.all_nums = self.convert_to_num(self.instances)
 
@@ -174,6 +175,7 @@ class Pattern(object):
             if key in self.location:
                 self.location[key]["page_num"].extend(location_dict[key]["page_num"])
                 self.location[key]["instances"].extend(location_dict[key]["instances"])
+                self.location[key]["order"].extend(location_dict[key]["order"])
             else:
                 self.location[key] = location_dict[key]
             self.page_nums.extend(location_dict[key]["instances"])

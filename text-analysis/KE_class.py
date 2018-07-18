@@ -366,6 +366,8 @@ class KnowledgeExtractor(object):
 
         patterns = [] #To store all the pattern objects for the doc
 
+        counter = 0
+
         #Create the signatures for each pattern. All signature information is stored in a pattern object.
         for page_num, page in enumerate(parsed_text):
 
@@ -393,14 +395,17 @@ class KnowledgeExtractor(object):
                     #flatten because ngrams returns a list of tuples
                     all_grams = []
                     for lst in all_grams_nested: all_grams += lst
+                    #track the relative position of every pattern
+                    positions = [counter+1 for i in range(len(all_grams))]
                     #print("all grams ", all_grams)
-                    n_gram_patterns = list(map(lambda text: Pattern(text, page_num, doc_name, self.makeID()), all_grams)) #list of pattern objects
+                    n_gram_patterns = list(map(lambda text, position: Pattern(text, page_num, doc_name, position), zip(all_grams, positions))) #list of pattern objects
                     patterns.extend(n_gram_patterns)
 
         #Filter, prune, and aggregate pattern instances
         filtered_patterns = self.apply_filters([self.punc_filter, self.no_num_filter, self.no_entity_filter,
                                                 self.multiple_entities_filter], patterns)
         #get the longest pattern with the same support (keeps only the superset, based on minsup criteria)
+        #TODO remove pruning and test
         pattern_subset = self.prune(filtered_patterns)
 
         #group all of the pattern instances by their base_pattern
