@@ -232,6 +232,7 @@ class KnowledgeExtractor(object):
         Looks for patterns with the same base pattern and stores their instances together. This updates both
          curr_patterns and all_patterns so that all previously found patterns get updated with the new instances.
         found in the current document.
+        TODO: check if the pattern has already been processed for the document
         :param patterns: list of pattern objects
         :return:
         """
@@ -245,7 +246,7 @@ class KnowledgeExtractor(object):
                 # self.curr_patterns[p.base_pattern].add_page_num(p.page_num)
 
             if p.base_pattern not in self.all_patterns.keys():
-                self.all_patterns[p.base_pattern] = p
+                self.all_patterns[p.base_pattern] = copy.deepcopy(p)
             else:
                 self.all_patterns[p.base_pattern].add(p.location)
                 # self.all_patterns[p.base_pattern].add_instance(p.instance)
@@ -405,9 +406,12 @@ class KnowledgeExtractor(object):
                     all_grams = []
                     for lst in all_grams_nested: all_grams += lst
                     #track the relative position of every pattern
-                    positions = [counter+1 for i in range(len(all_grams))]
+                    positions = [counter+i for i in range(len(all_grams))]
+                    print("all_grams ", all_grams)
+                    print("positions ", positions)
+                    counter += len(all_grams)
                     #print("all grams ", all_grams)
-                    n_gram_patterns = list(map(lambda text, position: Pattern(text, page_num, doc_name, position), zip(all_grams, positions))) #list of pattern objects
+                    n_gram_patterns = list(map(lambda text, position: Pattern(text, page_num, doc_name, position), all_grams, positions)) #list of pattern objects
                     patterns.extend(n_gram_patterns)
 
         #Filter, prune, and aggregate pattern instances
@@ -648,7 +652,8 @@ class KnowledgeExtractor(object):
             #add the pattern to the entity if its not already there
             if entity_name not in self.learned_patterns:
                 self.learned_patterns[entity_name] = {}
-                self.learned_patterns["seed_aliases"] = []
+                self.learned_patterns[entity_name]["base_patterns"] = []
+                self.learned_patterns[entity_name]["seed_aliases"] = []
 
             if pattern.base_pattern not in self.learned_patterns[entity_name]["base_patterns"]:
                 self.learned_patterns[entity_name]["base_patterns"].append(pattern.base_pattern)
@@ -661,21 +666,73 @@ class KnowledgeExtractor(object):
         #save the model, in case of a crash or something
         self.save(self.learned_patterns)
 
+    def aggregate_by_doc(self):
+        """
+
+        :return:
+        """
+        doc_report = {} #
+        """
+        in the form {"doc1" : {"ent1": {"values: [2.4, 5.6, 7.3], "order": [1,3,8]},
+                              "ent2": { }},
+                    "doc2: : {"ent1": {},
+                             "ent2": {}}
+                             etc.
+                             } 
+        """
+        #aggregate all the entities by document
+        for entity_name, values in self.learned_patterns.items():
+            #get all of the patterns associated with the entity to entities_per_doc
+            patterns = [self.all_patterns[base_pattern] for base_pattern in self.learned_patterns[entity_name]["base_patterns"] \
+                        if base_pattern in self.all_patterns.keys()]
+            for p in patterns:
+                for doc, d in p.location.items():
+                    if doc not in doc_report.keys():
+                        doc_report[doc] = {}
+                    if entity_name not in doc_report[doc]:
+                        doc_report[doc][entity_name] = {}
+                        doc_report[doc][entity_name]["value"] = []
+                        doc_report[doc][entity_name]["order"] = []
+                    #it's important to get the values after learning has already taken place because then the mask is set
+                    doc_report[doc][entity_name]["value"].extend(p.find_values(p.location[doc]["instances"]))
+                    doc_report[doc][entity_name]["order"].extend(p.location[doc]["order"])
+        print(doc_report)
+
+        #we need equal sized lists to create a dataframe, so we need to repeat the entity name and document as many times
+        #as there are values
+        all_vals = []
+        all_orders = []
+        all_docs = []
+        all_ents = []
+        for doc, d in doc_report.items():
+            for entity_name, d_inner in d.items():
+                all_vals.extend(d_inner["value"])
+                all_orders.extend(d_inner["order"])
+                all_ents.extend([entity_name] * len(d_inner["value"]))
+                all_docs.extend([doc] * len(d_inner["value"]))
+        unordered_records = pd.DataFrame({"document": all_docs, "entity": all_ents, "value": all_vals,
+                                          "order": all_orders})
+        return unordered_records
+
+
 
     def make_report_by_page(self):
         """
+        TODO: DEPRECATE
         This is a mess and hopefully a soon to be deprecated function. Don't look at me with those judgemental eyes.
         :return:
         """
         report = {}
         docs_and_pages = {}
         for entity_name, values in self.learned_patterns.items():
+            #get all of the base_patterns associated with the entity
             base_patterns = self.learned_patterns[entity_name]["base_patterns"]
             entity_report = {}
             for bp in base_patterns:
                 #get the pattern object
                 p = self.all_patterns[bp]
                 pat_report = p.report()
+                #update the report for this entity with this pattern's report
                 entity_report.update(pat_report)
             for doc, values in entity_report.items():
                 if doc not in docs_and_pages:

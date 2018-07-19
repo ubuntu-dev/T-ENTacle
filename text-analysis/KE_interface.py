@@ -215,5 +215,7 @@ class Interface:
                 self.interact_for_single_entity(entity_name, strict=strict, auto_skip=auto_skip)
 
         #once finished generate a report of what has been learned.
-        self.knowledge_extractor.make_report_by_page()
+        df = self.knowledge_extractor.aggregate_by_doc()
+        print(df)
+        #self.knowledge_extractor.make_report_by_page()
 

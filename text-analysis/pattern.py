@@ -171,15 +171,18 @@ class Pattern(object):
         :param location_dict: nested dictionary of form {"doc_name" : {"page_num" :[], "instances": []}}
         :return:
         """
-        for key in location_dict.keys():
-            if key in self.location:
-                self.location[key]["page_num"].extend(location_dict[key]["page_num"])
-                self.location[key]["instances"].extend(location_dict[key]["instances"])
-                self.location[key]["order"].extend(location_dict[key]["order"])
+        for doc in location_dict.keys():
+            if doc in self.location:
+                self.location[doc]["page_num"].extend(location_dict[doc]["page_num"])
+                self.location[doc]["instances"].extend(location_dict[doc]["instances"])
+                self.location[doc]["order"].extend(location_dict[doc]["order"])
+                #self.location[doc]["values"].extend(self.find_values(location_dict[doc]["instances"]))
             else:
-                self.location[key] = location_dict[key]
-            self.page_nums.extend(location_dict[key]["instances"])
-            self.instances.extend(location_dict[key]["instances"])
+                self.location[doc] = location_dict[doc]
+            self.page_nums.extend(location_dict[doc]["instances"])
+            self.instances.extend(location_dict[doc]["instances"])
+        # print("updated the pattern ", self.base_pattern)
+        # print(self.location)
 
     def add_page_num(self, new_page_num):
         self.page_nums.append(new_page_num)
@@ -227,20 +230,25 @@ class Pattern(object):
 
     def report(self):
         """
-        aggregate all the instances by document and then by page
-        report is in form {docname: {page1 : "val1\nval2\nval3"}, {page2 : "val1\nval2\nval3"}}
+        Aggregates all the instances by document
         :return:
         """
-        report = {}
-
-        for doc, dct in self.location.items():
-            report[doc] = {}
-            values = self.find_values(dct["instances"])
-            for tup in zip(dct["page_num"], values):
-                if tup[0] not in report[doc]:
-                    report[doc][tup[0]] = []
-                report[doc][tup[0]].append(tup[1])
-        return report
+    # def report(self):
+    #     """
+    #     aggregate all the instances by document and then by page
+    #     report is in form {docname: {page1 : "val1\nval2\nval3"}, {page2 : "val1\nval2\nval3"}}
+    #     :return:
+    #     """
+    #     report = {}
+    #
+    #     for doc, dct in self.location.items():
+    #         report[doc] = {}
+    #         values = self.find_values(dct["instances"])
+    #         for tup in zip(dct["page_num"], values):
+    #             if tup[0] not in report[doc]:
+    #                 report[doc][tup[0]] = []
+    #             report[doc][tup[0]].append(tup[1])
+    #     return report
 
     def get_string(self):
         """
