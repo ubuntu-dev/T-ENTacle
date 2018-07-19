@@ -3,6 +3,7 @@
 import itertools
 import json
 import csv
+import os
 
 parameters = {}
 # {'font-family': {'Georgia, serif': '0.02', '"Palatino Linotype", "Book Antiqua", Palatino, serif': '0.02', '"Times New Roman", Times, serif': '0.8', 'Arial, Helvetica, sans-serif': '0.06', '"Arial Black", Gadget, sans-serif': '0.05', '"Comic Sans MS", cursive, sans-serif': '0', 'Impact, Charcoal, sans-serif': '0', '"Lucida Sans Unicode", "Lucida Grande", sans-serif': '0', 'Tahoma, Geneva, sans-serif': '0.01', '"Trebuchet MS", Helvetica, sans-serif': '0', 'Verdana, Geneva, sans-serif': '0.01', '"Courier New", Courier, monospace': '0.03', '"Lucida Console", Monaco, monospace': '0'}, 'font-style': {'normal': '0.9', 'italic': '0.08', 'oblique': '0.02'}, 'font-weight': {'normal': '0.9', 'bold': '0.1'}, 'font-variant': {'normal': '0.85', 'small-caps': '0.15'}, 'font-size': {'8px': '0.1', '10px': '0.3', '12px': '0.2', '14px': '0.1', '16px': '0.1', '18px': '0.1', '20px': '0.1', '22px': '0', '24px': '0', '26px': '0'}, 'width': {'100%': '0.7', '75%': '0.2', '50%': '0.1'}, 'height': {'100px': '0.05', '500px': '0.15', '1000px': '0.2', '1500px': '0.2', '2000px': '0.3', '2500px': '0.1', '3000px': '0', '4000px': '0', '5000px': '0'}, 'padding': {'5px': '0.6', '10px': '0.2', '15px': '0.1', '20px': '0.1'}, 'border-collapses': {'yes': '0.3', 'no': '0.7'}, 'border thickness': {'1px': '0.7', '2px': '0.2', '3px': '0.1', '4px': '0'}, 'border type': {'solid': '0.95', 'dotted': '0.05'}, 'border color': {'black': '0.9', 'blue': '0.1', 'red': '0'}, 'border-bottoms': {'yes': '0.2', 'no': '0.8'}, 'text-align': {'left': '0.4', 'right': '0.4', 'center': '0.2'}, 'vertical-align': {'top': '0.4', 'bottom': '0.4', 'middle': '0.2'}, 'character distributions': {'words': '0.5', 'numbers': '0.4', 'symbols': '0.1'}}
@@ -73,7 +74,7 @@ def load_params():
 # def param_distr(numbers):
 
 
-def main():
+def borders():
     """
     Performs CSS and JSON generation
     """
@@ -136,8 +137,67 @@ def main():
     #     with open('./JSON/' + str(j) + '_str.json', 'w') as outfile:
     #         json.dump(table_str_json, outfile)
 
+# write_to_file(13, ff, nums_ff, "p", "font-family")
+def write_to_file(num_of_params, pars, nums, param_name, css_arr):
+    counter = 0
+    for a in range(num_of_params): #num_of_params
+        for i in range(nums[a]): #nums[a]
+            css_arr[counter] += "\n\t" + param_name + ": " + pars[a] + ";"
+            print("COUNTER: " + str(counter))
+            counter += 1
+
+def fonts():
+    nums_ff = []
+    nums_fst = []
+    nums_fw = []
+    nums_fv = []
+    nums_fsz = []
+    ff = []
+    fst = []
+    fw = []
+    fv = []
+    fsz = []
+    for par in parameters:
+        if 'border ' in par:
+            continue
+        if 'font-' in par:
+            for pr in parameters[par]:
+                if par == 'font-family':
+                    nums_ff.append(int(num_of_tables * float(parameters[par][pr])))
+                    ff.append(pr)
+                if par == 'font-style':
+                    nums_fst.append(int(num_of_tables * float(parameters[par][pr])))
+                    fst.append(pr)
+                if par == 'font-weight':
+                    nums_fw.append(int(num_of_tables * float(parameters[par][pr])))
+                    fw.append(pr)
+                if par == 'font-variant':
+                    nums_fv.append(int(num_of_tables * float(parameters[par][pr])))
+                    fv.append(pr)
+                if par == 'font-size':
+                    nums_fsz.append(int(num_of_tables * float(parameters[par][pr])))
+                    fsz.append(pr)
+    print(nums_ff)
+    css_arr = []
+    path = './CSS_test/'
+    for filename in os.listdir(path):
+        css_arr.append("p {")
+    print(css_arr)
+    write_to_file(13, ff, nums_ff, "font-family", css_arr)
+    write_to_file(3, fst, nums_fst, "font-style", css_arr)
+    write_to_file(2, fw, nums_fw, "font-weight", css_arr)
+    write_to_file(2, fv, nums_fv, "font-variant", css_arr)
+    write_to_file(10, fsz, nums_fsz, "font-size", css_arr)
+    for c in range(len(css_arr)):
+        css_arr[c] += "\n}\n"
+    print("ARR LENGTH: " + str(len(css_arr)))
+    for el in range(len(css_arr)):
+        f = open("./CSS_test/" + str(el) + ".css", "a")
+        f.write(css_arr[el])
+        f.close()
 
 
 load_params()
 
-main()
+# borders()
+fonts()
