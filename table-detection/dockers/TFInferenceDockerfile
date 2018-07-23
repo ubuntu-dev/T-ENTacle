@@ -1,0 +1,26 @@
+FROM cosmolab/tf-base:v1.0
+
+WORKDIR /app
+ADD appdet.py /app
+
+RUN git clone --single-branch -b tablegen https://github.com/nasa-jpl/T-ENTacle.git && \
+    cd T-ENTacle/table-detection && \
+    tar -cvzf detection_model.tar.gz model/ &&\
+    mv detection_model.tar.gz /app
+
+RUN mv T-ENTacle/table-detection/data/table_label_map.pbtxt /app
+
+WORKDIR /
+
+RUN apt-get autoremove && apt-get -y remove \
+        apt-utils \
+        curl \
+        git \
+        software-properties-common \
+        unzip \
+        wget
+
+EXPOSE 9009
+WORKDIR /app
+CMD python3 appdet.py
+
