@@ -6,7 +6,7 @@ import csv
 import os
 
 parameters = {}
-# {'font-family': {'Georgia, serif': '0.02', '"Palatino Linotype", "Book Antiqua", Palatino, serif': '0.02', '"Times New Roman", Times, serif': '0.8', 'Arial, Helvetica, sans-serif': '0.06', '"Arial Black", Gadget, sans-serif': '0.05', '"Comic Sans MS", cursive, sans-serif': '0', 'Impact, Charcoal, sans-serif': '0', '"Lucida Sans Unicode", "Lucida Grande", sans-serif': '0', 'Tahoma, Geneva, sans-serif': '0.01', '"Trebuchet MS", Helvetica, sans-serif': '0', 'Verdana, Geneva, sans-serif': '0.01', '"Courier New", Courier, monospace': '0.03', '"Lucida Console", Monaco, monospace': '0'}, 'font-style': {'normal': '0.9', 'italic': '0.08', 'oblique': '0.02'}, 'font-weight': {'normal': '0.9', 'bold': '0.1'}, 'font-variant': {'normal': '0.85', 'small-caps': '0.15'}, 'font-size': {'8px': '0.1', '10px': '0.3', '12px': '0.2', '14px': '0.1', '16px': '0.1', '18px': '0.1', '20px': '0.1', '22px': '0', '24px': '0', '26px': '0'}, 'width': {'100%': '0.7', '75%': '0.2', '50%': '0.1'}, 'height': {'100px': '0.05', '500px': '0.15', '1000px': '0.2', '1500px': '0.2', '2000px': '0.3', '2500px': '0.1', '3000px': '0', '4000px': '0', '5000px': '0'}, 'padding': {'5px': '0.6', '10px': '0.2', '15px': '0.1', '20px': '0.1'}, 'border-collapses': {'yes': '0.3', 'no': '0.7'}, 'border thickness': {'1px': '0.7', '2px': '0.2', '3px': '0.1', '4px': '0'}, 'border type': {'solid': '0.95', 'dotted': '0.05'}, 'border color': {'black': '0.9', 'blue': '0.1', 'red': '0'}, 'border-bottoms': {'yes': '0.2', 'no': '0.8'}, 'text-align': {'left': '0.4', 'right': '0.4', 'center': '0.2'}, 'vertical-align': {'top': '0.4', 'bottom': '0.4', 'middle': '0.2'}, 'character distributions': {'words': '0.5', 'numbers': '0.4', 'symbols': '0.1'}}
+# {'font-family': {'Georgia, serif': '0.02', '"Palatino Linotype", "Book Antiqua", Palatino, serif': '0.02', '"Times New Roman", Times, serif': '0.8', 'Arial, Helvetica, sans-serif': '0.06', '"Arial Black", Gadget, sans-serif': '0.05', '"Comic Sans MS", cursive, sans-serif': '0', 'Impact, Charcoal, sans-serif': '0', '"Lucida Sans Unicode", "Lucida Grande", sans-serif': '0', 'Tahoma, Geneva, sans-serif': '0.01', '"Trebuchet MS", Helvetica, sans-serif': '0', 'Verdana, Geneva, sans-serif': '0.01', '"Courier New", Courier, monospace': '0.03', '"Lucida Console", Monaco, monospace': '0'}, 'font-style': {'normal': '0.9', 'italic': '0.08', 'oblique': '0.02'}, 'font-weight': {'normal': '0.9', 'bold': '0.1'}, 'font-variant': {'normal': '0.85', 'small-caps': '0.15'}, 'font-size': {'8px': '0.1', '10px': '0.3', '12px': '0.2', '14px': '0.1', '16px': '0.1', '18px': '0.1', '20px': '0.1', '22px': '0', '24px': '0', '26px': '0'}, 'width': {'100%': '0.7', '75%': '0.2', '50%': '0.1'}, 'height': {'100px': '0.05', '500px': '0.15', '1000px': '0.2', '1500px': '0.2', '2000px': '0.3', '2500px': '0.1', '3000px': '0', '4000px': '0', '5000px': '0'}, 'padding': {'5px': '0.6', '10px': '0.2', '15px': '0.1', '20px': '0.1'}, 'border-collapses': {'yes': '0.3', 'no': '0.7'}, 'border thickness': {'1px': '0.7', '2px': '0.2', '3px': '0.1', '4px': '0'}, 'border type': {'solid': '0.95', 'dotted': '0.05'}, 'border color': {'black': '0.9', 'blue': '0.1', 'red': '0'}, 'text-align': {'left': '0.4', 'right': '0.4', 'center': '0.2'}, 'vertical-align': {'top': '0.4', 'bottom': '0.4', 'middle': '0.2'}, 'character distributions': {'words': '0.5', 'numbers': '0.4', 'symbols': '0.1'}}
 num_of_tables = 436700160
 num_of_files = 0
 
@@ -168,8 +168,12 @@ def general_table_css_generator(tag, pars, section, num_of_pars):
                 if par != p:
                     continue
                 if par == p:
-                    l_p.append(pr)
-                    l_n.append(int(num_of_tables * float(parameters[par][pr])))
+                    if pr == 'no':
+                        l_p.append('')
+                        l_n.append(int(num_of_tables * float(parameters[par][pr])))
+                    else:
+                        l_p.append(pr)
+                        l_n.append(int(num_of_tables * float(parameters[par][pr])))
         list_of_pars.append(l_p)
         list_of_nums.append(l_n)
     css_arr = []
@@ -253,7 +257,7 @@ load_params()
 # borders()
 # fonts()
 
-# tag = "p"
-# pars = ["font-family", "font-style",...]
-# section = "font-"
 general_table_css_generator("p", ["font-family", "font-style", "font-weight", "font-variant", "font-size"], "font-", [13, 3, 2, 2, 10])
+general_table_css_generator("table", ["width", "border-collapse"], "", [3, 2])
+general_table_css_generator("td", ["height", "text-align", "vertical-align"], "", [9, 3, 3])
+

@@ -20,11 +20,10 @@ table_width = ['100%', '75%', '50%']
 table_height = ['100px', '500px', '1000px', '1500px', '2000px', '2500px', '3000px', '4000px', '5000px']
 padding = ['5px', '10px', '15px', '20px']
 
-border_collapse = ['yes', 'no']
+border_collapse = ['collapse', 'no']
 border_thickness = ['1px', '2px', '3px', '4px']
 border_type = ['solid', 'dotted']
 border_colour = ['black', 'blue', 'red']
-border_bottom = ['yes', 'no']
 
 text_horiz_align = ['left', 'right', 'center']
 text_vertic_align = ['top', 'bottom', 'middle']
@@ -39,7 +38,7 @@ def write_to_file(data):
 def main():
 	data = []
 	all_params = [font_families, font_styles, font_weights, font_variants, font_size, table_width, table_height, padding, border_collapse,
-	border_thickness, border_type, border_colour, border_bottom, text_horiz_align, text_vertic_align, character_distr]
+	border_thickness, border_type, border_colour, text_horiz_align, text_vertic_align, character_distr]
 
 	for i in range(len(params)):
 		var = input("Please enter percentage (in decimal) for each " + str(params[i]) + " seperated by a comma (e.g. 0.7,0.3)\n" + str(all_params[i]) + "\n")
