@@ -1,2 +1,12 @@
-Max Pressure
-Max rate
+stage = stg, frac
+gun length or cluster length (ft) = ' X
+shots per ft (can vary -use average of spf = SPF
+number of perfs  per stage (holes fired) = SHOTS
+Total 100mesh (lbs) = 100 M
+total proppant (lbs) = TOTAL PROP LBM
+Total prop QC = 100 M
+pump rate avg (bpm) = ATR
+pump rate max (bpm) = MTR
+avg treating pressure (psi) = YES ATP
+max treating pressure (psi) = YES MTP
+ISIP (psi) = ISIP (FINAL) PSIG
