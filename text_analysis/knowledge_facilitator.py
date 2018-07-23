@@ -1316,10 +1316,10 @@ cli()
 #
 # print(df4.groupby(['page','doc']).agg(agg_dict))
 
-
 # learned_patterns=pd.read_csv('learned_patterns.csv',index_col=0)
 # learned_patterns = learned_patterns.replace(np.nan, '', regex=True)
 # all_patterns=pd.read_csv('all_patterns.csv',index_col=0)
 # all_patterns = all_patterns.replace(np.nan, '', regex=True)
 # build_report()
 #
+
