@@ -9,13 +9,14 @@ parameters = {}
 # {'font-family': {'Georgia, serif': '0.02', '"Palatino Linotype", "Book Antiqua", Palatino, serif': '0.02', '"Times New Roman", Times, serif': '0.8', 'Arial, Helvetica, sans-serif': '0.06', '"Arial Black", Gadget, sans-serif': '0.05', '"Comic Sans MS", cursive, sans-serif': '0', 'Impact, Charcoal, sans-serif': '0', '"Lucida Sans Unicode", "Lucida Grande", sans-serif': '0', 'Tahoma, Geneva, sans-serif': '0.01', '"Trebuchet MS", Helvetica, sans-serif': '0', 'Verdana, Geneva, sans-serif': '0.01', '"Courier New", Courier, monospace': '0.03', '"Lucida Console", Monaco, monospace': '0'}, 'font-style': {'normal': '0.9', 'italic': '0.08', 'oblique': '0.02'}, 'font-weight': {'normal': '0.9', 'bold': '0.1'}, 'font-variant': {'normal': '0.85', 'small-caps': '0.15'}, 'font-size': {'8px': '0.1', '10px': '0.3', '12px': '0.2', '14px': '0.1', '16px': '0.1', '18px': '0.1', '20px': '0.1', '22px': '0', '24px': '0', '26px': '0'}, 'width': {'100%': '0.7', '75%': '0.2', '50%': '0.1'}, 'height': {'100px': '0.05', '500px': '0.15', '1000px': '0.2', '1500px': '0.2', '2000px': '0.3', '2500px': '0.1', '3000px': '0', '4000px': '0', '5000px': '0'}, 'padding': {'5px': '0.6', '10px': '0.2', '15px': '0.1', '20px': '0.1'}, 'border-collapses': {'yes': '0.3', 'no': '0.7'}, 'border thickness': {'1px': '0.7', '2px': '0.2', '3px': '0.1', '4px': '0'}, 'border type': {'solid': '0.95', 'dotted': '0.05'}, 'border color': {'black': '0.9', 'blue': '0.1', 'red': '0'}, 'text-align': {'left': '0.4', 'right': '0.4', 'center': '0.2'}, 'vertical-align': {'top': '0.4', 'bottom': '0.4', 'middle': '0.2'}, 'character distributions': {'words': '0.5', 'numbers': '0.4', 'symbols': '0.1'}}
 num_of_tables = 436700160
 num_of_files = 0
+json_arr = []
 
 
 def build_json(index, lth, lty, lclr):
     """
     Builds a label JSON file that contains all information on the parameters
     :param index the index of the table
-    :lth line thickness
+    :param lth line thickness
     :lty line type
     :lclr line colour
     :return the JSON data
@@ -78,7 +79,7 @@ def load_params():
 
 def borders():
     """
-    Performs CSS and JSON generation
+    Generates CSS for table borders
     """
     cn = 0
     border = False
@@ -111,18 +112,24 @@ def borders():
             css += str(par)
         css += '}\n'
     css_arr = []
+    tmp_json_ar1 = []
+    tmp_json_ar2 = []
+    tmp_json_ar3 = []
     for th in range(4):
         for i in range(numbers_th[th]):
             css_arr.append("table, th, td, tr {\n\tborder: " + thickness[th] + " ")
+            tmp_json_ar1.append(thickness[th])
     j = 0
     for s in range(2):
         while j < numbers_st[s]:
             css_arr[j] += style[s] + " "
+            tmp_json_ar2.append(style[s])
             j += 1
     k = 0
     for c in range(3):
         while k < numbers_cl[c]:
             css_arr[k] += clr[c] + ";"
+            tmp_json_ar3.append(clr[c])
             k += 1
     for el in range(len(css_arr)):
         css_arr[el] += "\n}\n"
@@ -133,29 +140,46 @@ def borders():
         fw.write(str(v))
         filecount += 1
         fw.close()
+    global json_arr
+    for j in range(filecount):
+        json_dict = {}
+        json_dict["border_thickness"] = tmp_json_ar1[j]
+        json_dict["border_type"] = tmp_json_ar2[j]
+        json_dict["border_color"] = tmp_json_ar3[j]
+        json_arr.append(json_dict)
 
 
-    #     table_str_json = build_json(j, lth, lty, lclr)
-    #     with open('./JSON/' + str(j) + '_str.json', 'w') as outfile:
-    #         json.dump(table_str_json, outfile)
-
-# write_to_file(13, ff, nums_ff, "p", "font-family")
-def write_to_file(num_of_params, pars, nums, param_name, css_arr):
+def write_to_arr(num_of_params, pars, nums, param_name, css_arr):
+    """
+    Writes the CSS
+    :param num_of_params total number of parameters (e.g. 13 font families)
+    :param pars names of the parameters
+    :param nums queantities for each parameter
+    :param param_name name of the parameter family
+    :css_arr array of CSS elements
+    :return css_arr updated array of CSS elements
+    """
     counter = 0
-    for a in range(num_of_params): #num_of_params
-        for i in range(nums[a]): #nums[a]
+    global json_arr
+    for a in range(num_of_params): 
+        for i in range(nums[a]): 
             if counter >= num_of_files:
                 continue
             css_arr[counter] += "\n\t" + param_name + ": " + pars[a] + ";"
-            print("COUNTER: " + str(counter))
+            print("# " + str(counter))
+            json_arr[counter][param_name] = pars[a]
             counter += 1
     return css_arr
 
-# tag = "p"
-# pars = ["font-family", "font-style",...]
-# section = "font-"
-# num_of_pars = [13, 3, 2, 2, 10]
+
 def general_table_css_generator(tag, pars, section, num_of_pars):
+    """
+    Generates general CSS for tables
+    :param tag the tag for the CSS element
+    :param pars array of parameter names
+    :param section the parameters section
+    :param num_of_pars array of numbers of parameters
+    """
     if section == 'border ':
         sys.exit("Border settings require a separate function!")
     list_of_nums = []
@@ -183,11 +207,9 @@ def general_table_css_generator(tag, pars, section, num_of_pars):
         css_arr.append("p {")
         num_of_files += 1
     for el in range(len(pars)):
-        write_to_file(num_of_pars[el], list_of_pars[el], list_of_nums[el], pars[el], css_arr)
+        write_to_arr(num_of_pars[el], list_of_pars[el], list_of_nums[el], pars[el], css_arr)
     for c in range(len(css_arr)):
         css_arr[c] += "\n}\n"
-    print("ARR LENGTH: " + str(len(css_arr)))
-    print("NUM OF TABLES: " + str(num_of_tables))
     for el in range(len(css_arr)):
         print(css_arr[el])
         with open("./CSS_test/" + str(el) + ".css", "a") as f:
@@ -196,6 +218,9 @@ def general_table_css_generator(tag, pars, section, num_of_pars):
 
 
 def fonts():
+    """
+    Font-specific CSS geenration
+    """
     nums_ff = []
     nums_fst = []
     nums_fw = []
@@ -233,31 +258,37 @@ def fonts():
     for filename in os.listdir(path):
         css_arr.append("p {")
         num_of_files += 1
-    # print(css_arr)
-    write_to_file(13, ff, nums_ff, "font-family", css_arr)
-    write_to_file(3, fst, nums_fst, "font-style", css_arr)
-    write_to_file(2, fw, nums_fw, "font-weight", css_arr)
-    write_to_file(2, fv, nums_fv, "font-variant", css_arr)
-    write_to_file(10, fsz, nums_fsz, "font-size", css_arr)
+    write_to_arr(13, ff, nums_ff, "font-family", css_arr)
+    write_to_arr(3, fst, nums_fst, "font-style", css_arr)
+    write_to_arr(2, fw, nums_fw, "font-weight", css_arr)
+    write_to_arr(2, fv, nums_fv, "font-variant", css_arr)
+    write_to_arr(10, fsz, nums_fsz, "font-size", css_arr)
     for c in range(len(css_arr)):
         css_arr[c] += "\n}\n"
-    print("ARR LENGTH: " + str(len(css_arr)))
-    print("NUM OF TABLES: " + str(num_of_tables))
     for el in range(len(css_arr)):
         print(css_arr[el])
         with open("./CSS_test/" + str(el) + ".css", "a") as f:
             f.write(css_arr[el])
-        # f = open("./CSS_test/" + str(el) + ".css", "a")
-        # f.write(css_arr[el])
-        # f.close()
 
 
-load_params()
 
-# borders()
-# fonts()
+def main():
+    """
+    Generates the entire CSS and JSON label files
+    """
+    load_params()
+    global json_arr
+    borders()
+    general_table_css_generator("p", ["font-family", "font-style", "font-weight", "font-variant", "font-size"], "font-", [13, 3, 2, 2, 10])
+    general_table_css_generator("table", ["width", "border-collapse"], "", [3, 2])
+    general_table_css_generator("td", ["height", "text-align", "vertical-align"], "", [9, 3, 3])
+    table_str_json = build_json(j, lth, lty, lclr)
 
-general_table_css_generator("p", ["font-family", "font-style", "font-weight", "font-variant", "font-size"], "font-", [13, 3, 2, 2, 10])
-general_table_css_generator("table", ["width", "border-collapse"], "", [3, 2])
-general_table_css_generator("td", ["height", "text-align", "vertical-align"], "", [9, 3, 3])
+    global num_of_files
+    for f in range(num_of_files):
+        with open('./JSON/' + str(f) + '_str.json', 'w') as outfile:
+            json.dump(json_arr[f], outfile)
+
+
+main()
 

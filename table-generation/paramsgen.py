@@ -30,12 +30,19 @@ text_vertic_align = ['top', 'bottom', 'middle']
 character_distr = ['words', 'numbers', 'symbols']
 
 def write_to_file(data):
+	"""
+	Writes parameters to a csv file
+	:param data the data (row) to be written to file
+	"""
 	with open('./hyperparams.csv', 'a') as fp:
 		wr = csv.writer(fp, dialect='excel')
 		wr.writerow(data)
 
 
 def main():
+	"""
+	Prompts user to input probabilities for each parameter
+	"""
 	data = []
 	all_params = [font_families, font_styles, font_weights, font_variants, font_size, table_width, table_height, padding, border_collapse,
 	border_thickness, border_type, border_colour, text_horiz_align, text_vertic_align, character_distr]

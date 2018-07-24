@@ -46,7 +46,7 @@ def pdf_to_png(name):
 def pdf_to_jpg(filepdf, name):
     """
     Converts the PDF of a table to a JPG image
-    :filepdf the PDF file
+    :param filepdf the PDF file
     :param name file name
     :return the bounding box of the table in the JPG
     """
