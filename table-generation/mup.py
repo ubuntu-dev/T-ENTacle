@@ -134,7 +134,6 @@ def load_char_distr():
     Loads the csv files and builds a nested dictionary to represent the character distribution
     """
     map_of_probs = {}
-    main_keys = []
     counter = 1
     with open('./hyperparams.csv') as f:
         for line_keys, line_values in itertools.zip_longest(*[f]*2):
@@ -154,12 +153,20 @@ def load_char_distr():
             counter = counter + 1
 
 
+def load_header_images(image_folder): # "./logo-images"
+    list_of_images = []
+    for filename in os.listdir(image_folder):
+        list_of_images.append(filename)
+    return list_of_images
+
+
 def generate_html():
     """
     Generates the HTML and calls further methods
     """
     bounding_boxes_ = []
     list_of_words = read_words('../pdf-parser/text_for_tables.txt')
+    list_of_images = load_header_images('./logo-images')
     for x in os.listdir("./CSS_NEW"):
         page = mp.page()
         page.init(title="HTML Generator",
