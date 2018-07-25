@@ -136,7 +136,7 @@ def borders():
     filecount = 0
     for v in css_arr:
         filename = str(filecount) + ".css"
-        fw = open("./CSS_test/"+str(filename), "w+")
+        fw = open("./CSS_NEW/"+str(filename), "w+")
         fw.write(str(v))
         filecount += 1
         fw.close()
@@ -201,7 +201,7 @@ def general_table_css_generator(tag, pars, section, num_of_pars):
         list_of_pars.append(l_p)
         list_of_nums.append(l_n)
     css_arr = []
-    path = './CSS_test/'
+    path = './CSS_NEW/'
     global num_of_files
     for filename in os.listdir(path):
         css_arr.append("p {")
@@ -212,7 +212,7 @@ def general_table_css_generator(tag, pars, section, num_of_pars):
         css_arr[c] += "\n}\n"
     for el in range(len(css_arr)):
         print(css_arr[el])
-        with open("./CSS_test/" + str(el) + ".css", "a") as f:
+        with open("./CSS_NEW/" + str(el) + ".css", "a") as f:
             f.write(css_arr[el])
 
 
@@ -253,7 +253,7 @@ def fonts():
                     fsz.append(pr)
     print(nums_ff)
     css_arr = []
-    path = './CSS_test/'
+    path = './CSS_NEW/'
     global num_of_files
     for filename in os.listdir(path):
         css_arr.append("p {")
@@ -267,7 +267,7 @@ def fonts():
         css_arr[c] += "\n}\n"
     for el in range(len(css_arr)):
         print(css_arr[el])
-        with open("./CSS_test/" + str(el) + ".css", "a") as f:
+        with open("./CSS_NEW/" + str(el) + ".css", "a") as f:
             f.write(css_arr[el])
 
 
@@ -286,7 +286,7 @@ def main():
 
     global num_of_files
     for f in range(num_of_files):
-        with open('./JSON/' + str(f) + '_str.json', 'w') as outfile:
+        with open('./JSON_NEW/' + str(f) + '_str.json', 'w') as outfile:
             json.dump(json_arr[f], outfile)
 
 
