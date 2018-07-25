@@ -22,7 +22,7 @@ items = ("Item one", "Item two", "Item three", "Item four")
 paras = ("This was a fantastic list.", "And now for something completely different.")
 images = ("thumb1.jpg", "thumb2.jpg", "more.jpg", "more2.jpg")
 
-start = time.time()
+parameters = {}
 
 def table_to_pdf(name):
     """
@@ -129,21 +129,52 @@ def grouped(list_of_words, n):
     return zip((*[iter(list_of_words)]*n))
 
 
+def load_char_distr(): 
+    """
+    Loads the csv files and builds a nested dictionary to represent the character distribution
+    """
+    map_of_probs = {}
+    main_keys = []
+    counter = 1
+    with open('./hyperparams.csv') as f:
+        for line_keys, line_values in itertools.zip_longest(*[f]*2):
+            if counter < 15:
+                counter = counter + 1
+                continue
+            k_row = line_keys.split(',')
+            v_row = line_values.split(',')
+            main_key = k_row[0]
+            parameters[main_key] = {}
+            k_row.remove(k_row[0])
+            v_row.remove(v_row[0])
+            for key, value in zip(k_row, v_row):
+                if (len(key) <= 0 or key == '\n'):
+                    continue
+                parameters[main_key][key] = value
+            counter = counter + 1
+
+
 def generate_html():
     """
     Generates the HTML and calls further methods
     """
     bounding_boxes_ = []
     list_of_words = read_words('../pdf-parser/text_for_tables.txt')
-    for x in os.listdir("./CSS"):
+    for x in os.listdir("./CSS_NEW"):
         page = mp.page()
         page.init(title="HTML Generator",
-                  css=('../CSS/' + str(x)))
-        text = page.pre("HEEEEEELLLLLOOOOOOO")
+                  css=('../CSS_NEW/' + str(x)))
+        # text = page.pre("HEEEEEELLLLLOOOOOOO")
 
         page.table()
 
         # list_of_words = read_words('../pdf-parser/text_for_tables.txt')
+        # TODO: randomly insert p tags
+        #       use NLP to detect words, symbols and numbers and position them according to probabilities
+        #       scrape company logo images to use in headers
+        #       insert random text around the table
+        #       ? combine multiple pages into one
+
 
         for i in range(10): #rows
             page.tr()
@@ -171,7 +202,5 @@ def generate_html():
 
     #write_to_csv(bounding_boxes_)
 
-end = time.time()
-print(end - start)
 
 generate_html()
