@@ -17,10 +17,12 @@ import mxnet as mx
 import cv2
 import csv
 import random
-
-items = ("Item one", "Item two", "Item three", "Item four")
-paras = ("This was a fantastic list.", "And now for something completely different.")
-images = ("thumb1.jpg", "thumb2.jpg", "more.jpg", "more2.jpg")
+import itertools
+import nltk
+import numpy as np
+from nltk import word_tokenize, pos_tag, ne_chunk
+from nltk.chunk import conlltags2tree, tree2conlltags
+from nltk.tag import StanfordNERTagger
 
 parameters = {}
 
@@ -160,54 +162,104 @@ def load_header_images(image_folder): # "./logo-images"
     return list_of_images
 
 
+def char_distr(text):
+    """
+    Builds a list of words, numbers and symbols according to the distribution requested
+    :param text the text to be modified
+    :return list of words
+    """
+    nums = []
+    symbols = "! @ # $ % ^ & * ( ) _ - + = { } [ ]"
+    symb = symbols.split()
+    sent = text.split()
+    total_num = len(sent)
+    for key in parameters['character distributions']:   # {'character distributions': {'words': '0.5', 'numbers': '0.4', 'symbols': '0.1'}}
+        nums.append(float(parameters['character distributions'][key]) * total_num)
+    final_text = []
+    wc = 0
+    nc = 0
+    sc = 0
+    for el in sent:
+        if el.isnumeric() and nc < 1:#nums[1]:
+            print(str(el) + " is numeric")
+            final_text.append(el)
+            nc += 1
+        if any(s in el for s in symb) and sc < 2:#nums[2]:
+            print(str(el) + " is symbol")
+            final_text.append(el)
+            sc += 1
+        elif wc < 2:#nums[0]:
+            print(str(el) + " is word")
+            final_text.append(el)
+            wc += 1
+    return random.sample(final_text, len(final_text))
+
+
 def generate_html():
     """
     Generates the HTML and calls further methods
     """
     bounding_boxes_ = []
-    list_of_words = read_words('../pdf-parser/text_for_tables.txt')
+    load_char_distr()
+    all_words = read_words('../pdf-parser/text_for_tables.txt')
     list_of_images = load_header_images('./logo-images')
+    counter = 0
     for x in os.listdir("./CSS_NEW"):
         page = mp.page()
         page.init(title="HTML Generator",
                   css=('../CSS_NEW/' + str(x)))
         # text = page.pre("HEEEEEELLLLLOOOOOOO")
+        page.img(width=100, height=70, src=random.choice(list_of_images))
 
         page.table()
 
         # list_of_words = read_words('../pdf-parser/text_for_tables.txt')
-        # TODO: randomly insert p tags
-        #       use NLP to detect words, symbols and numbers and position them according to probabilities
-        #       scrape company logo images to use in headers
+        # TODO: 
+        #       randomly insert p tags
         #       insert random text around the table
         #       ? combine multiple pages into one
 
+        r = random.randint(5, 50)
+        c = random.randint(3, 15)
 
-        for i in range(10): #rows
-            page.tr()
-            for j in range(5): #columns
-                num = random.randint(1, 21)
+        for i in range(r): #rows
+            for j in range(c): #columns
+                num = random.randint(5, 300)
                 temp = ''
+                for r in range(num):
+                    temp += random.choice(all_words) + ' '
+        list_of_words = char_distr(temp)
+
+        for i in range(r): #rows
+            page.tr()
+            for j in range(c): #columns
+                num = random.randint(1, 21)
+                temp_text = ''
                 for r in range(num):
                     temp += random.choice(list_of_words) + ' '
                 page.td(temp)
                 page.td.close()
             page.tr.close()
-
         page.table.close()
+
+
+        print(str(page))
 
         file_ = os.path.splitext(x)[0]
         filename = file_ + ".html"
-        fw = open("./HTML/" + filename, "w+")
+        fw = open("./HTML_NEW/" + filename, "w+")
         fw.write(str(page))
         fw.close()
 
+        print("DONE")
+
         table_to_pdf(file_)
-        pdf_to_jpg('./PDF/' + file_ + '.pdf', file_)
+        pdf_to_jpg('./PDF_NEW/' + file_ + '.pdf', file_)
 
         #bounding_boxes_.append(pdf_to_jpg('./PDF/' + file_ + '.pdf', file_))
 
     #write_to_csv(bounding_boxes_)
 
 
-generate_html()
+# generate_html()
+
