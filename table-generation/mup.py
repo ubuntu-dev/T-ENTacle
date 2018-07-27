@@ -156,6 +156,11 @@ def load_char_distr():
 
 
 def load_header_images(image_folder): # "./logo-images"
+    """
+    Loads header images
+    :param image_folder the location of logos
+    :return list of images
+    """
     list_of_images = []
     for filename in os.listdir(image_folder):
         list_of_images.append(filename)
