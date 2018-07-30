@@ -262,9 +262,6 @@ def generate_html():
 
         page.p(extra_text_after)
 
-
-        print(str(page))
-
         file_ = os.path.splitext(x)[0]
         filename = file_ + ".html"
         fw = open("./HTML_NEW/" + filename, "w+")
