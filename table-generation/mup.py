@@ -186,16 +186,13 @@ def char_distr(text):
     nc = 0
     sc = 0
     for el in sent:
-        if el.isnumeric() and nc < 1:#nums[1]:
-            print(str(el) + " is numeric")
+        if el.isnumeric() and nc < nums[1]:#1:#nums[1]:
             final_text.append(el)
             nc += 1
-        if any(s in el for s in symb) and sc < 2:#nums[2]:
-            print(str(el) + " is symbol")
+        if any(s in el for s in symb) and sc < nums[2]:#2:#nums[2]:
             final_text.append(el)
             sc += 1
-        elif wc < 2:#nums[0]:
-            print(str(el) + " is word")
+        elif wc < nums[0]:#2:#nums[0]:
             final_text.append(el)
             wc += 1
     return random.sample(final_text, len(final_text))
@@ -214,15 +211,18 @@ def generate_html():
         page = mp.page()
         page.init(title="HTML Generator",
                   css=('../CSS_NEW/' + str(x)))
-        # text = page.pre("HEEEEEELLLLLOOOOOOO")
+
         page.img(width=100, height=70, src=random.choice(list_of_images))
+
+        extra_text_before = " ".join(random.sample(all_words, random.randint(50, 300)))
+        extra_text_after = " ".join(random.sample(all_words, random.randint(80, 400)))
+
+        page.p(extra_text_before)
 
         page.table()
 
         # list_of_words = read_words('../pdf-parser/text_for_tables.txt')
         # TODO: 
-        #       randomly insert p tags
-        #       insert random text around the table
         #       ? combine multiple pages into one
 
         r = random.randint(5, 50)
@@ -239,14 +239,14 @@ def generate_html():
         for i in range(r): #rows
             page.tr()
             for j in range(c): #columns
-                num = random.randint(1, 21)
+                num = random.randint(3, 21)
                 temp_text = ''
                 temp_list = []
                 for r in range(num):
                     word = random.choice(list_of_words)
                     temp_text += word + ' '
                     temp_list.append(word)
-                chosen = random.sample(temp_list, random.randint(3, 17))
+                chosen = random.sample(temp_list, random.randint(3, len(temp_list)))
                 no_p_text = ''
                 p_text = '<p>'
                 for w in temp_list:
@@ -255,25 +255,26 @@ def generate_html():
                     else:
                         p_text += w + ' '
                 p_text += '</p>'
-                # page.p(temp_text)
                 page.td(p_text + ' ' + no_p_text)
                 page.td.close()
             page.tr.close()
         page.table.close()
 
+        page.p(extra_text_after)
+
 
         print(str(page))
 
-        # file_ = os.path.splitext(x)[0]
-        # filename = file_ + ".html"
-        # fw = open("./HTML_NEW/" + filename, "w+")
-        # fw.write(str(page))
-        # fw.close()
+        file_ = os.path.splitext(x)[0]
+        filename = file_ + ".html"
+        fw = open("./HTML_NEW/" + filename, "w+")
+        fw.write(str(page))
+        fw.close()
 
         print("DONE")
 
-        # table_to_pdf(file_)
-        # pdf_to_jpg('./PDF_NEW/' + file_ + '.pdf', file_)
+        table_to_pdf(file_)
+        pdf_to_jpg('./PDF_NEW/' + file_ + '.pdf', file_)
 
         #bounding_boxes_.append(pdf_to_jpg('./PDF/' + file_ + '.pdf', file_))
 
@@ -281,4 +282,3 @@ def generate_html():
 
 
 generate_html()
-
