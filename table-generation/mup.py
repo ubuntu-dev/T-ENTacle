@@ -17,6 +17,7 @@ import mxnet as mx
 import cv2
 import csv
 import random
+from random import sample
 import itertools
 import nltk
 import numpy as np
@@ -240,9 +241,22 @@ def generate_html():
             for j in range(c): #columns
                 num = random.randint(1, 21)
                 temp_text = ''
+                temp_list = []
                 for r in range(num):
-                    temp += random.choice(list_of_words) + ' '
-                page.td(temp)
+                    word = random.choice(list_of_words)
+                    temp_text += word + ' '
+                    temp_list.append(word)
+                chosen = random.sample(temp_list, random.randint(3, 17))
+                no_p_text = ''
+                p_text = '<p>'
+                for w in temp_list:
+                    if w in chosen:
+                        no_p_text += w + ' '
+                    else:
+                        p_text += w + ' '
+                p_text += '</p>'
+                # page.p(temp_text)
+                page.td(p_text + ' ' + no_p_text)
                 page.td.close()
             page.tr.close()
         page.table.close()
@@ -250,21 +264,21 @@ def generate_html():
 
         print(str(page))
 
-        file_ = os.path.splitext(x)[0]
-        filename = file_ + ".html"
-        fw = open("./HTML_NEW/" + filename, "w+")
-        fw.write(str(page))
-        fw.close()
+        # file_ = os.path.splitext(x)[0]
+        # filename = file_ + ".html"
+        # fw = open("./HTML_NEW/" + filename, "w+")
+        # fw.write(str(page))
+        # fw.close()
 
         print("DONE")
 
-        table_to_pdf(file_)
-        pdf_to_jpg('./PDF_NEW/' + file_ + '.pdf', file_)
+        # table_to_pdf(file_)
+        # pdf_to_jpg('./PDF_NEW/' + file_ + '.pdf', file_)
 
         #bounding_boxes_.append(pdf_to_jpg('./PDF/' + file_ + '.pdf', file_))
 
     #write_to_csv(bounding_boxes_)
 
 
-# generate_html()
+generate_html()
 
