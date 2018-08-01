@@ -15,6 +15,7 @@ import timeit
 import os
 import utils
 import locale
+from smart_align import rec_separate
 
 """
 right now, works on one document at a time, but could move patterns dataframe to a class variable 
@@ -56,6 +57,7 @@ class KnowledgeExtractor(object):
     # could be made more robust by taking the list of units from grobid. This is certainly not comprehensive
     units = ['ft', 'gal', 'ppa', 'psi', 'lbs', 'lb', 'bpm', 'bbls', 'bbl', '\'', "\"", "'", "°", "$", 'hrs']
     learned_patterns, all_patterns, current_patterns, interesting_patterns, fuzzy_patterns = [], [], [], [], []
+    stage_name = "stage number"
 
     def __init__(self, threshold=10):
         # save state across documents
@@ -658,7 +660,7 @@ class KnowledgeExtractor(object):
             if pattern.base_pattern not in self.learned_patterns[entity_name]["base_patterns"]:
                 self.learned_patterns[entity_name]["base_patterns"].append(pattern.base_pattern)
 
-        #TODO decide how and if entity aliases should be saved.
+        # TODO decide how and if entity aliases should be saved.
         for ent, als in aliases.items():
             for alias in als:
                 if als not in self.learned_patterns[entity_name]["seed_aliases"]:
@@ -712,8 +714,36 @@ class KnowledgeExtractor(object):
                 all_docs.extend([doc] * len(d_inner["value"]))
         unordered_records = pd.DataFrame({"document": all_docs, "entity": all_ents, "value": all_vals,
                                           "order": all_orders})
+        unordered_records.to_csv("test.csv")
         return unordered_records
 
+    def make_report_by_smart_align(self):
+
+        unordered_records=self.aggregate_by_doc()
+        final_record = pd.DataFrame()
+
+        for document_name in unordered_records['document'].unique():
+            entities = set(unordered_records['entity'])
+            unordered_records_doc = unordered_records[unordered_records['document'] == document_name]
+            ordered_records_doc = unordered_records_doc.sort_values(by=['order'])
+            ordered_records_doc = ordered_records_doc.reset_index(drop=True)
+            _, all_indices = rec_separate(list(ordered_records_doc['entity']), self.stage_name)
+            separated_records = pd.DataFrame(columns=list(entities) + ['document'])
+
+            for record_indices in all_indices:
+                tempdict = {}
+                # fills cells of one row in the record
+                for index in record_indices:
+                    entity = ordered_records_doc.loc[index]['entity']
+                    value=ordered_records_doc.loc[index]['value']
+                    tempdict[entity] = value
+                tempdict['document'] = document_name
+                separated_records = separated_records.append(tempdict, ignore_index=True)
+
+            final_record = pd.concat([final_record, separated_records])
+
+        final_record.reset_index(inplace=True, drop=True)
+        final_record.to_csv('report_smart_align.csv')
 
 
     def make_report_by_page(self):
@@ -741,11 +771,11 @@ class KnowledgeExtractor(object):
                 docs_and_pages[doc].extend(list(entity_report[doc].keys()))
             #remove duplicates of pages
             for k,v in docs_and_pages.items():
-                docs_and_pages[k] = list(set(docs_and_pages[k])) #TODO this is bad programming practice change this later
+                docs_and_pages[k] = list(set(docs_and_pages[k])) # TODO this is bad programming practice change this later
             report[entity_name] = entity_report
 
 
-        #add all the entities to a row of the dataframe page by page, document by document
+        # add all the entities to a row of the dataframe page by page, document by document
         all_rows = []
         for doc, pages in docs_and_pages.items():
             for page in pages:
@@ -764,5 +794,5 @@ class KnowledgeExtractor(object):
                     row[entity_name] = value_str
                 all_rows.append(row)
         df_report = pd.DataFrame(all_rows)
-        #write to csv
+        # write to csv
         df_report.to_csv("report.csv", index=False)
