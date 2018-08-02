@@ -3,8 +3,8 @@
 import os
 import csv
 
-params = ['font-family', 'font-style', 'font-weight', 'font-variant', 'font-size', 'width', 'height', 
-'padding', 'border-collapses', 'border thickness', 'border type', 'border color', 'border-bottom', 'text-align', 
+params = ['font-family', 'font-style', 'font-weight', 'font-variant', 'font-size', 'width', 'height', 'position', 'top', 'left',
+'padding', 'border-collapse', 'border thickness', 'border type', 'border color', 'text-align', 
 'vertical-align', 'character distribution']
 
 font_families = ['Georgia, serif', '"Palatino Linotype", "Book Antiqua", Palatino, serif', '"Times New Roman", Times, serif', 
@@ -16,8 +16,11 @@ font_weights = ['normal', 'bold']
 font_variants = ['normal', 'small-caps']
 font_size = ['8px', '10px', '12px', '14px', '16px', '18px', '20px', '22px', '24px', '26px']
 
-table_width = ['100%', '75%', '50%']
+table_width = ['900px', '800px', '700px', '550px']
 table_height = ['100px', '500px', '1000px', '1500px', '2000px', '2500px', '3000px', '4000px', '5000px']
+position = ['absolute']
+top = ['0px', '5px', '10px', '15px', '20px']
+left = ['0px', '5px', '10px', '15px', '20px']
 padding = ['5px', '10px', '15px', '20px']
 
 border_collapse = ['collapse', 'no']
@@ -44,7 +47,7 @@ def main():
 	Prompts user to input probabilities for each parameter
 	"""
 	data = []
-	all_params = [font_families, font_styles, font_weights, font_variants, font_size, table_width, table_height, padding, border_collapse,
+	all_params = [font_families, font_styles, font_weights, font_variants, font_size, table_width, table_height, position, top, left, padding, border_collapse,
 	border_thickness, border_type, border_colour, text_horiz_align, text_vertic_align, character_distr]
 
 	for i in range(len(params)):

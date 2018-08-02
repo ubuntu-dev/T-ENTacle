@@ -32,7 +32,7 @@ def table_to_pdf(name):
     Converts an HTML table to a PDF file
     :param name file name
     """
-    pdfkit.from_file('./HTML/' + name + ".html", './PDF/' + name + ".pdf")
+    pdfkit.from_file('./HTML_NEW/' + name + ".html", './PDF_NEW/' + name + ".pdf")
 
 
 def pdf_to_png(name):
@@ -41,9 +41,9 @@ def pdf_to_png(name):
     :param name file name
     """
     size = 7016, 4961
-    with Image(filename='./PDF/' + name + '.pdf') as img:
+    with Image(filename='./PDF_NEW/' + name + '.pdf') as img:
         with img.convert('png') as converted:
-            converted.save(filename='./PNG/' + name+ '.png')
+            converted.save(filename='./PNG_NEW/' + name+ '.png')
 
 
 def pdf_to_jpg(filepdf, name):
@@ -63,7 +63,7 @@ def pdf_to_jpg(filepdf, name):
         min_shape = sorted([(np.sum(i.size), i.size) for i in imgs])[0][1] #combine images
         imgs_c = np.vstack((np.asarray(i.resize(min_shape)) for i in imgs)) #vertical
         imgs_c = Img.fromarray(imgs_c)
-        path = './JPG/' + name + '_%s.jpg' % uuids
+        path = './JPG_NEW/' + name + '_%s.jpg' % uuids
         imgs_c.save(path)
         bounding_box(path)
         for i in list_im:
@@ -164,7 +164,7 @@ def load_header_images(image_folder): # "./logo-images"
     """
     list_of_images = []
     for filename in os.listdir(image_folder):
-        list_of_images.append(filename)
+        list_of_images.append('.' + str(image_folder) + str(filename))
     return list_of_images
 
 
@@ -205,17 +205,18 @@ def generate_html():
     bounding_boxes_ = []
     load_char_distr()
     all_words = read_words('../pdf-parser/text_for_tables.txt')
-    list_of_images = load_header_images('./logo-images')
+    list_of_images = load_header_images('./logo-images/')
     counter = 0
-    for x in os.listdir("./CSS_NEW"):
+    for x in os.listdir("./CSS_NEW_1"):
+        print(x)
         page = mp.page()
         page.init(title="HTML Generator",
-                  css=('../CSS_NEW/' + str(x)))
+                  css=('../CSS_NEW_1/' + str(x)))
 
         page.img(width=100, height=70, src=random.choice(list_of_images))
 
-        extra_text_before = " ".join(random.sample(all_words, random.randint(50, 300)))
-        extra_text_after = " ".join(random.sample(all_words, random.randint(80, 400)))
+        extra_text_before = " ".join(random.sample(all_words, random.randint(300, 1000)))
+        extra_text_after = " ".join(random.sample(all_words, random.randint(500, 3000)))
 
         page.p(extra_text_before)
 

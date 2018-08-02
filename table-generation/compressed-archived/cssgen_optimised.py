@@ -10,11 +10,15 @@ from time import time
 from queue import Queue
 from threading import Thread
 
+import tarfile
+import io
+
 class CSSGen(object):
 
     def __init__(self):
         self.parameters = {}
         self.num_of_tables = 436700160
+        
 
     def load_params(self):
         """
@@ -155,10 +159,16 @@ class CSSGen(object):
 
                 for a in range(num_of_params):
                     line = tag + " {\n\t" + param_name + ": " + l_pars[a] + ";\n}\n"
+                    csv_line = ''
                     dic = { }
                     dic[param_name] = l_pars[a]
+                    if tag == 'table':
+                        if param_name == 'width' or param_name == 'height' or param_name == 'top' or param_name == 'left':
+                            sz = l_pars[a]
+                            csv_line += str(sz[:-2]) + ','
+                        csv_line = csv_line[:-1]
                     for i in range(l_nums[a]):
-                        yield (line, dic)
+                        yield (line, dic, csv_line)
 
 
 class CssJsonWriterWorker(Thread):
@@ -194,14 +204,14 @@ def main(argv=sys.argv):
 
     borders = css.borders()
     paragraphs =  css.general_table_css_generator("p", ["font-family", "font-style", "font-weight", "font-variant", "font-size"], "font-", [13, 3, 2, 2, 10])
-    tables = css.general_table_css_generator("table", ["width", "height", "top", "left", "border-collapse"], "", [3, 2])
+    tables = css.general_table_css_generator("table", ["width", "height", "position", "top", "left", "border-collapse"], "", [3, 2])
     tds = css.general_table_css_generator("td", ["padding", "text-align", "vertical-align"], "", [9, 3, 3])
 
-    css_folder = './CSS_NEW_2'
+    css_folder = './css'
     if not os.path.exists(css_folder):
         os.makedirs(css_folder)
 
-    json_folder = './JSON_NEW_2'
+    json_folder = './json'
     if not os.path.exists(json_folder):
         os.makedirs(json_folder)
 
@@ -219,11 +229,14 @@ def main(argv=sys.argv):
     css_tar = tarfile.open("css.tar.gz", "w:gz")
     json_tar = tarfile.open("json.tar.gz", "w:gz")
 
+    csv_coordinates = open('./table_locations.csv', 'w')
+    csv_coordinates.write('width,height,top,left\n')
+
     for border, paragraph, table, td in zip(borders, paragraphs, tables, tds):
         line1, dic1 = border
-        line2, dic2 = paragraph
-        line3, dic3 = table
-        line4, dic4 = td
+        line2, dic2, csv_line2 = paragraph
+        line3, dic3, csv_line3 = table
+        line4, dic4, csv_line4 = td
 
         name = str(count)
         css_content = line1 + line2 + line3 + line4
@@ -240,6 +253,8 @@ def main(argv=sys.argv):
         json_info = tarfile.TarInfo(name= "json/" + name + "_str.json")
         json_info.size=len(json_content)
         css_tar.addfile(tarinfo = json_info, fileobj = json_bytes)
+
+        csv_coordinates.write(csv_line3 + '\n')
 
 
         # queue.put((str(count), line1 + line2 + line3 + line4, dic))
@@ -260,6 +275,7 @@ def main(argv=sys.argv):
 
     css_tar.close()
     json_tar.close()
+    csv_coordinates.close()
     #queue.join()
     print('Took {}'.format(time() - ts))
 
