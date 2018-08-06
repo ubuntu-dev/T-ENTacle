@@ -216,6 +216,7 @@ class Interface:
 
         #once finished generate a report of what has been learned.
         df = self.knowledge_extractor.aggregate_by_doc()
+        df.to_csv("output.csv")
         print(df)
         #self.knowledge_extractor.make_report_by_page()
 
