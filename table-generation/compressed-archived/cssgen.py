@@ -17,7 +17,7 @@ class CSSGen(object):
 
     def __init__(self):
         self.parameters = {}
-        self.num_of_tables = 436700160
+        self.num_of_tables = 1000#436700160
         self.csv_map = {
             "width": 0,
             "height": 1,
@@ -297,13 +297,13 @@ def main(argv=sys.argv):
             "vertical-align"
         ])
 
-    css_folder = './css_full'
+    css_folder = './css'
     if not os.path.exists(css_folder):
        os.makedirs(css_folder)
 
-    json_folder = './json_full'
-    if not os.path.exists(json_folder):
-       os.makedirs(json_folder)
+    # json_folder = './json'
+    # if not os.path.exists(json_folder):
+    #    os.makedirs(json_folder)
 
     # queue = Queue()
     # thread_count = 10
