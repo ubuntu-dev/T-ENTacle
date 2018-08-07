@@ -5,13 +5,13 @@ import json
 import csv
 import os
 import sys
-from time import time
+import tarfile
+import io
 
+from time import time
 from queue import Queue
 from threading import Thread
 
-import tarfile
-import io
 
 class CSSGen(object):
 
@@ -30,8 +30,6 @@ class CSSGen(object):
         """
         Loads the json and builds a nested dictionary to represent all parameters and their percentages/probabilities
         """
-        #with open('hyperparams.json') as f:
-        #    self.parameters = json.load(f)
         map_of_probs = {}
         main_keys = []
         counter = 0
@@ -142,6 +140,10 @@ class CSSGen(object):
 
 
     def make_size_distribution(self, attrs):
+        """
+        Generate distribution based on probabilities
+        :attrs list of parameters
+        """
         styles = {}
         for attr in attrs:
             if attr in self.parameters:
@@ -156,7 +158,21 @@ class CSSGen(object):
                     count += styles[attr][pr]
         return styles
 
+
     def make_pair(self, tag, css, json, csv, start, end, curr, attr_list, attr, count):
+        """
+        Crteates a pair of parameters (recursive)
+        :param tag the tag
+        :css the css line
+        :json the json element
+        :csv information for the csv
+        :start the start tracker
+        :end the end tracker
+        :curr current location
+        :attr_list list of parameters
+        :attr the parameter
+        :count counter
+        """
         if start >= end:
             return
         elif  curr >= len(attr_list):
@@ -190,13 +206,12 @@ class CSSGen(object):
 
             count[name] += c
 
+
     def general_table_css_generator(self, tag, attrs):
         """
         Generates general CSS for tables
         :param tag the tag for the CSS element
-        :param pars array of parameter names
-        :param section the parameters section
-        :param num_of_pars array of numbers of parameters
+        :param attrs the parameters
         """
 
         attr_distr = self.make_size_distribution(attrs)
@@ -215,7 +230,7 @@ class CSSGen(object):
                 csv_ind = self.csv_map[attr]
 
             for name, num in style.items():
-                css_line = "\n\t" + attr + ": " + name
+                css_line = "\n\t" + attr + ": " + name + ";"
 
                 end = ind + num
                 while ind < end:
@@ -234,10 +249,10 @@ class CSSGen(object):
              css[i] = (c, j, ','.join(cv))
 
         return css
-        # end of use
+        # end
 
         '''
-        # Uncomment inf program fails out of memory
+        # Uncomment if program fails out of memory
         count = {}
         dic = {}
         csv = ['', '', '', '']
@@ -301,27 +316,10 @@ def main(argv=sys.argv):
     if not os.path.exists(css_folder):
        os.makedirs(css_folder)
 
-    # json_folder = './json'
-    # if not os.path.exists(json_folder):
-    #    os.makedirs(json_folder)
-
-    # queue = Queue()
-    # thread_count = 10
-    # for x in range(thread_count):
-    #     worker = CssJsonWriterWorker(css_folder, json_folder, queue)
-    #     worker.daemon = True
-    #     worker.start()
-    #print(css.parameters)
     ts = time()
     count = 0
 
-    # css_folder = './out'
-    # if not os.path.exists(css_folder):
-    #     os.makedirs(css_folder)
-
-    # css_tar = tarfile.open("css.tar", "w")
     css_tar = tarfile.open(os.path.join(css_folder, "css.tar.gz"), "w:gz")
-    #json_tar = tarfile.open("json.tar.gz", "w:gz")
 
     csv_coordinates = open(os.path.join(css_folder, 'table_locations.csv'), 'w')
     csv_coordinates.write('width,height,top,left\n')
@@ -350,27 +348,10 @@ def main(argv=sys.argv):
 
         csv_coordinates.write(csv_line3 + '\n')
 
-
-        # queue.put((str(count), line1 + line2 + line3 + line4, dic))
-
-        # filename = os.path.join(css_folder, str(count) + ".css")
-        # with open(filename, 'w') as file:
-        #     file.write(line1)
-        #     file.write(line2)
-        #     file.write(line3)
-        #     file.write(line4)
-
-        # # dic = {**dic1, **dic2, **dic3, **dic4}
-        # filename = os.path.join(json_folder, str(count) + '_str.json')
-        # with open(filename, 'w') as outfile:
-        #     json.dump(dic, outfile)
-
         count += 1
 
     css_tar.close()
-    #json_tar.close()
     csv_coordinates.close()
-    #queue.join()
     print('Took {}'.format(time() - ts))
 
 
