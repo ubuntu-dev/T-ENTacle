@@ -18,3 +18,4 @@ dill==0.2.7.1
 fuzzywuzzy==0.16.0
 PyPDF2==1.26.0
 tika==1.16
+spacy==2.0.9
