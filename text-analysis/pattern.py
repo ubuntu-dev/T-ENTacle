@@ -2,7 +2,6 @@ import string
 import ast
 import re
 from itertools import chain
-import locale
 
 class Pattern(object):
     PREP = "Prep~"
@@ -29,7 +28,6 @@ class Pattern(object):
     punc = set(string.punctuation)
     # could be made more robust by taking the list of units from grobid. This is certainly not comprehensive
     units = ['ft', 'gal', 'ppa', 'psi', 'lbs', 'lb', 'bpm', 'bbls', 'bbl', '\'', "\"", "'", "°", "$", 'hrs']
-    locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
     def __init__(self, tokens, page_num, doc_name, position):
         self.instance = tokens #list of strings
@@ -43,7 +41,6 @@ class Pattern(object):
         #in KE class, aggregate locations by document
         self.location = {doc_name: {"page_num": [page_num], "instances": [tokens], "order": [position]}} #this could eventually be some sort of character position for grouping
         self.mask = range(len(tokens))
-        self.all_nums = self.convert_to_num(self.instances)
 
     def set_mask(self, mask):
         """
@@ -147,23 +144,6 @@ class Pattern(object):
 
             return tuple(base_pattern)
 
-    def add_instance(self, new_instance):
-        """
-        Adds another instance of the pattern
-        :param new_instance: tuple of strings or list of tuples of strings
-        :return:
-        """
-        if isinstance(new_instance, tuple):
-            self.instances.append(new_instance)
-            self.all_nums.append(self.convert_to_num(new_instance))
-           # self.all_nums.sort()
-        elif isinstance(new_instance, list):
-            self.instances.extend(new_instance)
-            self.all_nums.extend(self.convert_to_num(new_instance))
-            #self.all_nums.sort()
-        else:
-            error_message = 'Expected a string or list but got type ' + str(type(new_instance))
-            raise TypeError(error_message)
 
     def add(self, location_dict):
         """
@@ -268,56 +248,5 @@ class Pattern(object):
                    'base_pattern': self.base_pattern, 'document_name': self.doc_name, 'num_instances': len(self.instances)}
         return as_dict
 
-    def _convert_to_num_helper(self, instance, indices, as_num):
-        """
-        TODO this doesn't really work because some numbers are not really values like 25.789.67
-        :param instance:
-        :param indices:
-        :param as_num:
-        :return:
-        """
-        for i in indices:
-            number = instance[i]
-            try:
-                # check if the number is a fraction:
-                if "/" in number:
-                    nums = number.split('/')
-                    if len(nums) > 2:  # then it's not a fraction!
-                        continue
-                    else:
-                        number = int(nums[0]) / int(nums[1])
-                        as_num.append(number)
-                else:
-                    as_num.append(locale.atof(number))
-            except ValueError:
-                pass
-                # print(ValueError)
-                # print(self.hpattern)
-                # print("index " + str(i))
-                # print(instance)
-                # print(number)
-        return as_num
-
-    def convert_to_num(self, instances):
-        """
-        Stores the numeric part of an instance as an instance and keeps in sorted order
-        TODO: use a better data structure for sorting, like a linked list or ordered dict or tree!
-        :param instances:
-        :return:
-        """
-        as_num = []
-        if Pattern.DIGI in self.base_pattern:
-            indices = [i for i in range(len(self.base_pattern)) if self.base_pattern[i] == Pattern.DIGI]
-            if isinstance(instances, list):
-                for instance in instances:
-                    as_num = self._convert_to_num_helper(instance, indices, as_num)
-            elif isinstance(instances, tuple):
-                as_num = self._convert_to_num_helper(instances, indices, as_num)
-            else:
-                raise ValueError
-                print("Expected type list or tuple but got type " + type(instances))
-
-        as_num.sort()
-        return as_num
 
 
