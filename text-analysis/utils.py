@@ -49,26 +49,27 @@ def parse_document(file_path):
     global current_document
     current_document=file_path.split('/')[-1]
 
-    parsed_text=[]
+    # parsed_text=[]
     # create a dir for dumping split pdfs
-    if os.path.exists('./temp'):
-        shutil.rmtree('./temp/')
-    else:
-        os.mkdir('./temp')
-    split_pdf_pages(file_path, 'temp')
+    # if os.path.exists('./temp'):
+    #     shutil.rmtree('./temp/')
+    # else:
+    #     os.mkdir('./temp')
+    # split_pdf_pages(file_path, 'temp')
 
-    for pdf_page in os.listdir('temp'):
-        # print('processing page: ',pdf_page)
-        parsed = parser.from_file(os.path.join('temp', pdf_page))
-        try:
-            pdftext = parsed['content']
-        except Exception:
-            print("Could not read file.")
-            pdftext=''
+    # for pdf_page in os.listdir('temp'):
+    #     # print('processing page: ',pdf_page)
+    #     parsed = parser.from_file(os.path.join('temp', pdf_page))
+    #     try:
+    #         pdftext = parsed['content']
+    #     except Exception:
+    #         print("Could not read file.")
+    #         pdftext=''
+    #
+    #     parsed_text.append(pdftext)
+    parsed = parser.from_file(file_path)
 
-        parsed_text.append(pdftext)
-
-    return parsed_text
+    return [parsed["content"]]
 
 def load(filename):
     """

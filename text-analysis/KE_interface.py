@@ -69,7 +69,7 @@ class Interface:
         print("I found the following patterns that may represent " + entity_name + ".\n")
         print(menu)
         output = "Please enter the indices, separated by spaces, of all of the patterns you wish to select.\n" + \
-                 "Or enter s to skip this entity or v to search by value."
+                 "Or enter s to skip this entity or v to search by value.\n"
         pattern_selection = input(output)
         if pattern_selection in ['v', 'V', 's', 'S']:
             return pattern_selection
@@ -79,15 +79,15 @@ class Interface:
         patterns_to_keep = [patterns[int(i)] for i in pattern_selection if i]
 
         for p in patterns_to_keep:
-            print("You chose " + " ".join(p.instances[0]))
-            print("The value of select mask is ", select_mask)
+            print("You chose " + " ".join(p.instances[0]) + "\n")
+            print("The value of select mask is ", select_mask + "\n")
             if select_mask:
             # for each pattern that the user selected, allow them to select the appropriate tokens (the mask).
                 valid_input = False
                 while not valid_input:
                     print(p.instances[0])
                     mask_message = "Please enter, separated by spaces, the indices of the pattern \"" + " ".join(p.instances[0]) + \
-                                    "\" you wish to keep. Or enter a to keep all."
+                                    "\" you wish to keep. Or enter a to keep all.\n"
                     print(mask_message)
                     output = [str(i) + " " + p.instances[0][i] for i in range(len(p.instances[0]))]
                     output = "\t".join(output)
@@ -105,9 +105,9 @@ class Interface:
                                 p.set_mask(new_mask)
                                 valid_input = True
                             else:
-                                print("You entered too many indices. Please try again.")
+                                print("You entered too many indices. Please try again.\n")
                         except ValueError:
-                            print("I didn't understand your input. Please try again.")
+                            print("I didn't understand your input. Please try again.\n")
 
             self.knowledge_extractor.update_learned_patterns(entity_name, p, self.aliases)
         return None
@@ -134,7 +134,7 @@ class Interface:
         #first check if we have already learned the entity or something similar to it
         exact_patterns, close_patterns, far_patterns = self.knowledge_extractor.matcher_bo_entity(entity_name,
                                                                                                   self.aliases[entity_name])
-        print("far patterns")
+        print("far patterns\n")
         for p in far_patterns:
             print(p.base_pattern)
 
@@ -143,10 +143,10 @@ class Interface:
         if strict == True:
             #do not interact with the user at all
             if len(exact_patterns) == 0:
-                print('Since no exact pattern found, and interactive is False. Skipping this entity.')
+                print('Since no exact pattern found, and interactive is False. Skipping this entity.\n')
                 return
             else:
-                print("Adding exact matches")
+                print("Adding exact matches\n")
                 #only add exact matches
                 self.knowledge_extractor.update_learned_patterns(entity_name, exact_patterns, self.aliases)
 
@@ -154,11 +154,11 @@ class Interface:
             selection = None
             if auto_skip == True and len(exact_patterns) != 0:
                 # don't bother the user for exact matches, just save
-                print("Found exact pattern")
+                print("Found exact pattern\n")
                 self.knowledge_extractor.update_learned_patterns(entity_name, exact_patterns, self.aliases)
             #get user input if we found close or far matches
             elif len(close_patterns) != 0 or len(far_patterns) !=0 :
-                print("Found similar patterns")
+                print("Found similar patterns\n")
                 #TODO should this be true?
                 selection = self.get_user_selection(entity_name, close_patterns+far_patterns, True)
             # elif len(far_patterns) != 0:
@@ -166,7 +166,7 @@ class Interface:
             #     selection = self.get_user_selection(entity_name, far_patterns, True)
 
             else:
-                print("I couldn't find anything that matched the entity. ")
+                print("I couldn't find anything that matched the entity. \n")
                 return
 
             #check if the user wants to skip this entity or search by value instead
@@ -184,7 +184,7 @@ class Interface:
 
                 except ValueError:
                     #TODO better error handling
-                    print("Sorry, I didn't understand that input. ")
+                    print("Sorry, I didn't understand that input. \n")
 
 
     def single_doc_cli(self, file_path, strict=False, auto_skip=False):

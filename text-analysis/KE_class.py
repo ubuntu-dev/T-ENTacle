@@ -68,31 +68,23 @@ class KnowledgeExtractor(object):
         ##################################
         #these should perhaps become class variables
         # entity matchings for all the documents processed so far
-        if os.path.exists('learned_patterns.csv'):
-            self.learned_patterns_df = pd.read_csv('learned_patterns.csv', index_col=0)
+        if os.path.exists('model/learned_patterns.csv'):
+            self.learned_patterns_df = pd.read_csv('model/learned_patterns.csv', index_col=0)
             self.learned_patterns_df.replace(np.nan, '', regex=True, inplace=True)
         else:
             self.learned_patterns_df = pd.DataFrame(columns=['entity_name', 'seed_aliases', 'pattern_ids'])
-        if os.path.exists("learned_patterns.pkl"):
-            self.learned_patterns = utils.load("learned_patterns.pkl")
+        if os.path.exists("model/learned_patterns.pkl"):
+            self.learned_patterns = utils.load("model/learned_patterns.pkl")
         else:
             self.learned_patterns = {}
-        if os.path.exists("all_patterns.pkl"):
+        if os.path.exists("model/all_patterns.pkl"):
             print("loaded all patterns")
-            self.all_patterns = utils.load("all_patterns.pkl")
+            self.all_patterns = utils.load("model/all_patterns.pkl")
         else:
             self.all_patterns = {}
 
-        # pattern information about all the patterns seen so far from all the documents processed
-        # if os.path.exists('all_patterns.csv'):
-        #     self.all_patterns = pd.read_csv('all_patterns.csv', index_col=0)
-        #     self.all_patterns.replace(np.nan, '', regex=True, inplace=True)
-        # else:
-        #     self.all_patterns = pd.DataFrame(
-        #         columns=['pattern_id', 'base_pattern', 'instances', 'hpattern', 'document_name', 'num_instances',
-        #                  'mask', 'page_numbers'])
-        if os.path.exists('all_patterns.pkl'):
-            self.all_patterns = utils.load('all_patterns.pkl') #dictionary of pattern objects. key is hpattern
+        if os.path.exists('model/all_patterns.pkl'):
+            self.all_patterns = utils.load('model/all_patterns.pkl') #dictionary of pattern objects. key is hpattern
         else:
             self.all_patterns = {}
         #####################################
@@ -120,13 +112,6 @@ class KnowledgeExtractor(object):
 
 
     def break_natural_boundaries(self, text):
-        # text = self.whitespace_around_punc(text)
-        # tokenized = text.split()
-        # for t in tokenized:
-        #     print(t)
-        #     doc = self.nlp(t)
-        #     for ent in doc.ents:
-        #         print(ent.text, ent.label_)
         parsed = self.nlp(text)
         tokenized = []
         for token in parsed:
@@ -143,44 +128,6 @@ class KnowledgeExtractor(object):
             elif not token.is_space:
                 tokenized.append(str(token))
         return tokenized
-        #
-        # print("\nEntities")
-        # for ent in parsed.ents:
-        #     print(ent.text, ent.label_)
-        # print(text.split())
-
-    # def break_natural_boundaries(self, text):
-    #
-    #     stringbreak = []
-    #     if len(text.split(' ')) > 1:
-    #         stringbreak = text.split(' ')
-    #     else:
-    #         # spl = '[\.\,|\%|\$|\^|\*|\@|\!|\_|\-|\(|\)|\:|\;|\'|\"|\{|\}|\[|\]|]'
-    #         alpha = '[A-z]'
-    #         num = '\d'
-    #         spl = '[^A-z\d]'
-    #
-    #         matchindex = set()
-    #         matchindex.update(set(m.start() for m in re.finditer(num + alpha, text)))
-    #         matchindex.update(set(m.start() for m in re.finditer(alpha + num, text)))
-    #         matchindex.update(set(m.start() for m in re.finditer(spl + alpha, text)))
-    #         matchindex.update(set(m.start() for m in re.finditer(alpha + spl, text)))
-    #         matchindex.update(set(m.start() for m in re.finditer(spl + num, text)))
-    #         matchindex.update(set(m.start() for m in re.finditer(num + spl, text)))
-    #         matchindex.update(set(m.start() for m in re.finditer(spl + spl, text)))
-    #
-    #         matchindex.add(len(text) - 1)
-    #         matchindex = sorted(matchindex)
-    #         start = 0
-    #
-    #         for i in matchindex:
-    #             end = i
-    #             stringbreak.append(text[start:end + 1])
-    #             start = i + 1
-    #     stringbreak = [s for s in stringbreak if s]
-    #     for s in stringbreak:
-    #         print(s)
-    #     return stringbreak
 
 
     def prune(self, patterns):
@@ -244,15 +191,11 @@ class KnowledgeExtractor(object):
                 self.curr_patterns[p.base_pattern] = p
             else:
                 self.curr_patterns[p.base_pattern].add(p.location)
-                # self.curr_patterns[p.base_pattern].add_instance(p.instance)
-                # self.curr_patterns[p.base_pattern].add_page_num(p.page_num)
 
             if p.base_pattern not in self.all_patterns.keys():
                 self.all_patterns[p.base_pattern] = copy.deepcopy(p)
             else:
                 self.all_patterns[p.base_pattern].add(p.location)
-                # self.all_patterns[p.base_pattern].add_instance(p.instance)
-                # self.all_patterns[p.base_pattern].add_page_num(p.page_num)
 
 
     def significance_filter(self, row):
@@ -409,8 +352,8 @@ class KnowledgeExtractor(object):
                     for lst in all_grams_nested: all_grams += lst
                     #track the relative position of every pattern
                     positions = [counter+i for i in range(len(all_grams))]
-                    print("all_grams ", all_grams)
-                    print("positions ", positions)
+                    # print("all_grams ", all_grams)
+                    # print("positions ", positions)
                     counter += len(all_grams)
                     #print("all grams ", all_grams)
                     n_gram_patterns = list(map(lambda text, position: Pattern(text, page_num, doc_name, position), all_grams, positions)) #list of pattern objects
@@ -421,8 +364,8 @@ class KnowledgeExtractor(object):
                                                 self.multiple_entities_filter], patterns)
         #get the longest pattern with the same support (keeps only the superset, based on minsup criteria)
         #TODO remove pruning and test
-        pattern_subset = self.prune(filtered_patterns)
-
+        #pattern_subset = self.prune(filtered_patterns)
+        pattern_subset = filtered_patterns
         #group all of the pattern instances by their base_pattern, and update current and all patterns
         self.aggregate_patterns(pattern_subset)
 
@@ -444,7 +387,7 @@ class KnowledgeExtractor(object):
         for testing
         :return:
         """
-        with open("all_patterns.pkl", "wb") as f:
+        with open("model/all_patterns.pkl", "wb") as f:
             dill.dump(self.all_patterns, f)
 
     def save(self, model):
@@ -454,7 +397,7 @@ class KnowledgeExtractor(object):
         :return:
         """
         #TODO get the pwd and add to path. all_patterns doesn't seem to be saving
-        base_path = os.getcwd()
+        base_path = os.path.join(os.getcwd(), "model")
         fname = ""
         if model == self.learned_patterns:
             fname = "learned_patterns"
@@ -698,7 +641,7 @@ class KnowledgeExtractor(object):
                     #it's important to get the values after learning has already taken place because then the mask is set
                     doc_report[doc][entity_name]["value"].extend(p.find_values(p.location[doc]["instances"]))
                     doc_report[doc][entity_name]["order"].extend(p.location[doc]["order"])
-        print(doc_report)
+        #print(doc_report)
 
         #we need equal sized lists to create a dataframe, so we need to repeat the entity name and document as many times
         #as there are values
@@ -743,7 +686,7 @@ class KnowledgeExtractor(object):
             final_record = pd.concat([final_record, separated_records])
 
         final_record.reset_index(inplace=True, drop=True)
-        final_record.to_csv('report_smart_align.csv')
+        final_record.to_csv('report/report_smart_align.csv')
 
 
     def make_report_by_page(self):
@@ -795,4 +738,4 @@ class KnowledgeExtractor(object):
                 all_rows.append(row)
         df_report = pd.DataFrame(all_rows)
         # write to csv
-        df_report.to_csv("report.csv", index=False)
+        df_report.to_csv("report/report.csv", index=False)

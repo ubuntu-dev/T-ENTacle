@@ -28,6 +28,8 @@ def cli(path, i, a, f, e=''):
     #TODO decide if each document should have its own KE object, or if it should share. prob its own??
 
     #read the files
+    if not os.path.exists(path):
+        print("Not found ", path)
     if os.path.isdir(path):
         for root, dirs, files in os.walk(path):
             for file in files:
